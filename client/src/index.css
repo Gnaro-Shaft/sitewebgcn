@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-accent: #00ff88;
+  --color-accent-hover: #00e87a;
+  --color-accent-glow: rgba(0, 255, 136, 0.06);
+  --color-accent-border: rgba(0, 255, 136, 0.25);
+  --color-accent-bg: rgba(0, 255, 136, 0.04);
+
+  --color-dark-bg: #0a0a0a;
+  --color-dark-bg2: #111111;
+  --color-dark-bg3: #181818;
+  --color-dark-border: #222222;
+  --color-dark-text: #e8e8e8;
+  --color-dark-muted: #999999;
+
+  --animate-fade-in-up: fade-in-up 0.6s ease-out both;
+  --animate-fade-in: fade-in 0.8s ease-out both;
+  --animate-glow-pulse: glow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+body {
+  @apply bg-white text-gray-900 dark:bg-dark-bg dark:text-dark-text transition-colors duration-300;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Full-screen scroll-snap layout */
+.snap-container {
+  height: 100vh;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+
+.snap-section {
+  min-height: 100vh;
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.snap-section > * {
+  width: 100%;
+  max-width: 72rem; /* 6xl */
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Markdown prose dark mode */
+.prose-custom h2 {
+  @apply text-gray-900 dark:text-dark-text font-bold mt-8 mb-4;
+}
+.prose-custom h3 {
+  @apply text-gray-800 dark:text-dark-text font-semibold mt-6 mb-3;
+}
+.prose-custom p {
+  @apply text-gray-700 dark:text-dark-muted leading-relaxed mb-4;
+}
+.prose-custom strong {
+  @apply text-gray-900 dark:text-dark-text;
+}
+.prose-custom a {
+  @apply text-accent hover:underline;
+}
+.prose-custom code {
+  @apply px-1.5 py-0.5 rounded bg-gray-100 dark:bg-dark-bg3 text-sm font-mono text-gray-800 dark:text-accent;
+}
+.prose-custom pre {
+  @apply p-4 rounded-lg bg-gray-100 dark:bg-dark-bg2 border border-gray-200 dark:border-dark-border overflow-x-auto mb-4;
+}
+.prose-custom pre code {
+  @apply bg-transparent p-0;
+}
+.prose-custom ul, .prose-custom ol {
+  @apply pl-6 mb-4 space-y-1 text-gray-700 dark:text-dark-muted;
+}
+.prose-custom li {
+  @apply leading-relaxed;
+}
+.prose-custom ul li::marker {
+  @apply text-accent;
+}
+.prose-custom hr {
+  @apply border-gray-200 dark:border-dark-border my-8;
+}
+.prose-custom blockquote {
+  @apply border-l-2 border-accent pl-4 italic text-gray-600 dark:text-dark-muted;
+}

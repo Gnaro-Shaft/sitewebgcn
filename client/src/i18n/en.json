@@ -1,0 +1,134 @@
+{
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "blog": "Blog",
+    "about": "About",
+    "skills": "Skills",
+    "contact": "Contact",
+    "dashboard": "Dashboard"
+  },
+  "hero": {
+    "title": "Genaro-Cedric",
+    "subtitle": "Fullstack Developer & AI Engineer",
+    "description": "Building production-grade applications — from backend APIs to intelligent dashboards.",
+    "downloadCv": "Download CV",
+    "contactMe": "Contact Me"
+  },
+  "about": {
+    "title": "About",
+    "paragraph1_start": "With over ",
+    "paragraph1_highlight": "7 years of N1/N2 IT support experience",
+    "paragraph1_end": ", I work with major enterprise clients in demanding technical environments. Diagnosing and resolving complex incidents, analyzing systems and technical workflows, managing user workstations and critical environments — missions that shaped my rigor and adaptability.",
+    "paragraph2": "These experiences allowed me to develop expertise in Python and data analysis, with a focus on problem-solving and continuous improvement.",
+    "paragraph3_start": "Currently, I am specializing in ",
+    "paragraph3_highlight": "Data and Artificial Intelligence",
+    "paragraph3_end": ", strengthening my skills in Python, data analysis, and automation. My goal is to evolve into Data/AI Engineering roles, with a particular focus on intelligent systems and machine learning.",
+    "paragraph4": "I am driven by developing innovative and high-performance solutions, while contributing to impactful technical projects.",
+    "timeline": {
+      "support": "IT Support",
+      "supportPeriod": "7+ years",
+      "bootcamp": "Bootcamp",
+      "bootcampPeriod": "Web & Mobile",
+      "ai": "Data / AI",
+      "aiPeriod": "In progress"
+    }
+  },
+  "skills": {
+    "title": "Skills",
+    "groups": {
+      "frontend": "Frontend & Mobile",
+      "ai": "AI & Python",
+      "backend": "Backend & Tools"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "viewAll": "View all",
+    "all": "All",
+    "noProjects": "No projects yet.",
+    "code": "Code",
+    "live": "Live"
+  },
+  "contact": {
+    "title": "Contact",
+    "name": "Name",
+    "email": "Email",
+    "subject": "Subject (optional)",
+    "message": "Your message",
+    "send": "Send Message",
+    "sending": "Sending...",
+    "success": "Message sent successfully!",
+    "error": "Failed to send. Please try again."
+  },
+  "blog": {
+    "title": "Blog",
+    "backToBlog": "Back to blog",
+    "notFound": "Article not found",
+    "loading": "Loading...",
+    "noArticles": "No articles yet."
+  },
+  "login": {
+    "title": "Dashboard",
+    "subtitle": "Sign in to access your cockpit",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign In",
+    "signingIn": "Signing in..."
+  },
+  "dashboard": {
+    "welcomeBack": "Welcome back,",
+    "subtitle": "Your personal cockpit",
+    "logout": "Logout",
+    "configWidgets": "Configure widgets",
+    "noWidgets": "No widgets enabled",
+    "configure": "Configure",
+    "configTitle": "Configure Widgets",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "widgets": {
+    "crypto": "Crypto Live",
+    "github": "GitHub Stats",
+    "blog": "Blog Stats",
+    "trades": "Trades",
+    "performance": "Algo Performance",
+    "signals": "Signals",
+    "openPositions": "Open Positions",
+    "noOpenPositions": "No open positions",
+    "recentTrades": "Recent Trades",
+    "noTrades": "No trades yet",
+    "avgWin": "Avg Win",
+    "avgLoss": "Avg Loss",
+    "cumulativePnl": "Cumulative PnL",
+    "days": "days",
+    "winrate": "Winrate",
+    "profitFactor": "Profit Factor",
+    "totalTrades": "Total trades",
+    "topLanguages": "Top Languages",
+    "recentActivity": "Recent Activity",
+    "publicRepos": "public repos",
+    "recentArticles": "Recent Articles",
+    "published": "published",
+    "drafts": "draft(s)",
+    "totalViews": "total views",
+    "lastSignals": "Latest Signals",
+    "signalDistribution": "Distribution",
+    "noSignals": "No signals",
+    "change24h": "24h change",
+    "autoRefresh": "auto-refresh 60s",
+    "chart7d": "7-day chart"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "goHome": "Go home"
+  },
+  "footer": {
+    "rights": "All rights reserved."
+  },
+  "theme": {
+    "auto": "Auto",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "projects": "Projets",
+    "blog": "Blog",
+    "about": "A propos",
+    "skills": "Competences",
+    "contact": "Contact",
+    "dashboard": "Dashboard"
+  },
+  "hero": {
+    "title": "Genaro-Cedric",
+    "subtitle": "Developpeur Fullstack & Ingenieur IA",
+    "description": "Je construis des applications de qualite production — des APIs backend aux dashboards intelligents.",
+    "downloadCv": "Telecharger CV",
+    "contactMe": "Me contacter"
+  },
+  "about": {
+    "title": "A propos",
+    "paragraph1_start": "Fort de plus de ",
+    "paragraph1_highlight": "7 ans d'experience en support informatique N1/N2",
+    "paragraph1_end": ", j'interviens aupres de grands comptes dans des environnements techniques exigeants. Diagnostic et resolution d'incidents complexes, analyse des systemes et des flux techniques, gestion des postes utilisateurs et environnements critiques — autant de missions qui ont forge ma rigueur et ma capacite d'adaptation.",
+    "paragraph2": "Ces experiences m'ont permis de developper une expertise en Python et en analyse de donnees, en mettant l'accent sur la resolution de problemes et l'amelioration continue.",
+    "paragraph3_start": "Actuellement, je me specialise dans les domaines de la ",
+    "paragraph3_highlight": "Data et de l'intelligence artificielle",
+    "paragraph3_end": ", en renforcant mes competences en Python, analyse de donnees et automatisation. Mon objectif est d'evoluer vers des roles en Data/AI Engineering, avec une attention particuliere portee aux systemes intelligents et a l'apprentissage automatique.",
+    "paragraph4": "Je suis motive par le developpement de solutions innovantes et performantes, tout en contribuant a des projets techniques impactants.",
+    "timeline": {
+      "support": "Support IT",
+      "supportPeriod": "7+ ans",
+      "bootcamp": "Bootcamp",
+      "bootcampPeriod": "Web & Mobile",
+      "ai": "Data / IA",
+      "aiPeriod": "En cours"
+    }
+  },
+  "skills": {
+    "title": "Competences",
+    "groups": {
+      "frontend": "Frontend & Mobile",
+      "ai": "IA & Python",
+      "backend": "Backend & Outils"
+    }
+  },
+  "projects": {
+    "title": "Projets",
+    "viewAll": "Voir tout",
+    "all": "Tous",
+    "noProjects": "Aucun projet pour le moment.",
+    "code": "Code",
+    "live": "Demo"
+  },
+  "contact": {
+    "title": "Contact",
+    "name": "Nom",
+    "email": "Email",
+    "subject": "Sujet (optionnel)",
+    "message": "Votre message",
+    "send": "Envoyer",
+    "sending": "Envoi en cours...",
+    "success": "Message envoye avec succes !",
+    "error": "Echec de l'envoi. Veuillez reessayer."
+  },
+  "blog": {
+    "title": "Blog",
+    "backToBlog": "Retour au blog",
+    "notFound": "Article introuvable",
+    "loading": "Chargement...",
+    "noArticles": "Aucun article pour le moment."
+  },
+  "login": {
+    "title": "Dashboard",
+    "subtitle": "Connectez-vous pour acceder a votre cockpit",
+    "email": "Email",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "signingIn": "Connexion..."
+  },
+  "dashboard": {
+    "welcomeBack": "Bon retour,",
+    "subtitle": "Votre cockpit personnel",
+    "logout": "Deconnexion",
+    "configWidgets": "Configurer les widgets",
+    "noWidgets": "Aucun widget active",
+    "configure": "Configurer",
+    "configTitle": "Configurer les widgets",
+    "cancel": "Annuler",
+    "save": "Sauvegarder"
+  },
+  "widgets": {
+    "crypto": "Crypto Live",
+    "github": "Stats GitHub",
+    "blog": "Stats Blog",
+    "trades": "Trades",
+    "performance": "Performance Algo",
+    "signals": "Signaux",
+    "openPositions": "Positions ouvertes",
+    "noOpenPositions": "Aucune position ouverte",
+    "recentTrades": "Trades recents",
+    "noTrades": "Aucun trade",
+    "avgWin": "Gain moyen",
+    "avgLoss": "Perte moyenne",
+    "cumulativePnl": "PnL cumule",
+    "days": "jours",
+    "winrate": "Winrate",
+    "profitFactor": "Profit Factor",
+    "totalTrades": "Total trades",
+    "topLanguages": "Langages principaux",
+    "recentActivity": "Activite recente",
+    "publicRepos": "repos publics",
+    "recentArticles": "Articles recents",
+    "published": "publie(s)",
+    "drafts": "brouillon(s)",
+    "totalViews": "vues totales",
+    "lastSignals": "Derniers signaux",
+    "signalDistribution": "Distribution",
+    "noSignals": "Aucun signal",
+    "change24h": "Variation 24h",
+    "autoRefresh": "actualisation auto 60s",
+    "chart7d": "Graphique 7 jours"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "goHome": "Retour a l'accueil"
+  },
+  "footer": {
+    "rights": "Tous droits reserves."
+  },
+  "theme": {
+    "auto": "Auto",
+    "light": "Clair",
+    "dark": "Sombre"
+  }
+}
