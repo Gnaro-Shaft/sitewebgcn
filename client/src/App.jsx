@@ -12,6 +12,7 @@ import BlogPage from './pages/BlogPage';
 import ArticlePage from './pages/ArticlePage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import AdminDrafts from './pages/AdminDrafts';
 import NotFound from './pages/NotFound';
 
 function PublicLayout({ children }) {
@@ -44,6 +45,13 @@ export default function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin drafts review */}
+            <Route path="/admin/drafts" element={
+              <ProtectedRoute>
+                <AdminDrafts />
               </ProtectedRoute>
             } />
 

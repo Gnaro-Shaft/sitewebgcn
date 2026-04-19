@@ -9,6 +9,7 @@ import CryptoWidget from '../components/widgets/BitcoinWidget';
 import TradesWidget from '../components/widgets/TradesWidget';
 import PerformanceWidget from '../components/widgets/PerformanceWidget';
 import SignalsWidget from '../components/widgets/SignalsWidget';
+import BlogAIWidget from '../components/widgets/BlogAIWidget';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
 
@@ -16,6 +17,7 @@ const DEFAULT_WIDGETS = [
   { id: 'crypto', label: 'Crypto Live', enabled: true },
   { id: 'github', label: 'GitHub Stats', enabled: true },
   { id: 'blog', label: 'Blog Stats', enabled: true },
+  { id: 'blogAi', label: 'Blog AI', enabled: true },
   { id: 'trades', label: 'Trades', enabled: true },
   { id: 'performance', label: 'Algo Performance', enabled: true },
   { id: 'signals', label: 'Signals', enabled: true },
@@ -25,6 +27,7 @@ const WIDGET_COMPONENTS = {
   crypto: CryptoWidget,
   github: GitHubStatsWidget,
   blog: BlogStatsWidget,
+  blogAi: BlogAIWidget,
   trades: TradesWidget,
   performance: PerformanceWidget,
   signals: SignalsWidget,

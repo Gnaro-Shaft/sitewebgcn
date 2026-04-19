@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ override: true });
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -104,6 +104,7 @@ app.use('/api/cv', require('./routes/cv'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/trading', require('./routes/trading'));
 app.use('/api/github', require('./routes/github'));
+app.use('/api/ai', require('./routes/ai'));
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {
