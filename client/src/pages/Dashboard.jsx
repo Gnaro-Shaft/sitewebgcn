@@ -40,12 +40,27 @@ export default function Dashboard() {
   const [widgets, setWidgets] = useState(DEFAULT_WIDGETS);
   const [showConfig, setShowConfig] = useState(false);
 
-  // Load widget config
+  // Load widget config + auto-merge new widgets from code
   useEffect(() => {
     api.get('/dashboard/widgets')
       .then((res) => {
-        if (Array.isArray(res.data.data) && res.data.data.length > 0) {
-          setWidgets(res.data.data);
+        const saved = res.data.data;
+        if (!Array.isArray(saved) || saved.length === 0) return;
+
+        // Auto-add any widget defined in code but missing from user's saved config
+        const savedIds = new Set(saved.map((w) => w.id));
+        const merged = [...saved];
+        for (const def of DEFAULT_WIDGETS) {
+          if (!savedIds.has(def.id)) {
+            merged.push(def);
+          }
+        }
+
+        setWidgets(merged);
+
+        // Persist the merge so it's saved for next time
+        if (merged.length !== saved.length) {
+          api.patch('/dashboard/widgets', { widgets: merged }).catch(() => {});
         }
       })
       .catch(() => {});
