@@ -15,6 +15,9 @@ connectBotDB();
 
 const app = express();
 
+// Trust Fly.io proxy (for correct X-Forwarded-For handling)
+app.set('trust proxy', 1);
+
 // Middleware — Security
 app.use(
   helmet({
