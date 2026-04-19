@@ -28,6 +28,7 @@ app.use(
           "'self'",
           "https://api.coingecko.com",
           "https://api.github.com",
+          "https://github-contributions-api.jogruber.de",
           "https://api.hyperliquid.xyz",
         ],
         imgSrc: ["'self'", "data:", "https:"],

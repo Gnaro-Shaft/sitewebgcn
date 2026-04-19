@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import useInView from '../../hooks/useInView';
+import GitHubHeatmap from '../ui/GitHubHeatmap';
 
 export default function About() {
   const { t } = useTranslation();
@@ -36,6 +37,14 @@ export default function About() {
           <TimelineStep label={t('about.timeline.bootcamp')} period={t('about.timeline.bootcampPeriod')} />
           <div className="w-12 md:w-20 h-px bg-accent" />
           <TimelineStep label={t('about.timeline.ai')} period={t('about.timeline.aiPeriod')} active />
+        </div>
+
+        {/* GitHub contributions heatmap */}
+        <div className="mt-10 pt-8 border-t border-gray-200 dark:border-dark-border">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">
+            {t('about.githubActivity')}
+          </h3>
+          <GitHubHeatmap />
         </div>
       </div>
     </div>
