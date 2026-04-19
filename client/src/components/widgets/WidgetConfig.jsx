@@ -1,10 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function WidgetConfig({ widgets, onSave, onClose }) {
   const { t } = useTranslation();
   const [items, setItems] = useState([...widgets]);
   const [dragIdx, setDragIdx] = useState(null);
+  const modalRef = useRef(null);
+  const closeBtnRef = useRef(null);
+
+  // Focus trap + Escape key
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    closeBtnRef.current?.focus();
+
+    const handleKey = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        // Trap focus inside modal
+        const focusables = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      previouslyFocused?.focus();
+    };
+  }, [onClose]);
 
   const toggle = (id) => {
     setItems(items.map((w) => w.id === id ? { ...w, enabled: !w.enabled } : w));
@@ -43,11 +80,21 @@ export default function WidgetConfig({ widgets, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-dark-bg2 rounded-2xl border border-gray-200 dark:border-dark-border shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="widget-config-title"
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-dark-bg2 rounded-2xl border border-gray-200 dark:border-dark-border shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-dark-border flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 dark:text-dark-text">{t('dashboard.configTitle')}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors">
+          <h2 id="widget-config-title" className="font-semibold text-gray-900 dark:text-dark-text">{t('dashboard.configTitle')}</h2>
+          <button ref={closeBtnRef} onClick={onClose} aria-label={t('dashboard.cancel')} className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors focus:outline-none focus:ring-2 focus:ring-accent rounded">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>

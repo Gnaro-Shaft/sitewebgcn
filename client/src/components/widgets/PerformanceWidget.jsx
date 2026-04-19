@@ -1,19 +1,25 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
+import WidgetError from './WidgetError';
 
 export default function PerformanceWidget() {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const canvasRef = useRef(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    setError(false);
     api.get('/trading/performance?days=30')
       .then((res) => setData(res.data.data))
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   // Draw cumulative PnL chart
   useEffect(() => {
@@ -72,6 +78,7 @@ export default function PerformanceWidget() {
   }, [data]);
 
   if (loading) return <WidgetShell title={t('widgets.performance')}><Skeleton /></WidgetShell>;
+  if (error) return <WidgetShell title={t('widgets.performance')}><WidgetError onRetry={fetchData} /></WidgetShell>;
   if (!data) return <WidgetShell title={t('widgets.performance')}><p className="text-sm text-gray-400">No data</p></WidgetShell>;
 
   const pnlColor = data.totalPnl >= 0 ? 'text-accent' : 'text-red-500';

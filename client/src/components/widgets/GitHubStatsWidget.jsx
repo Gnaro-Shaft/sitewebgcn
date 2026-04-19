@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import WidgetError from './WidgetError';
 
 const GITHUB_USER = 'gnaro-shaft';
 
@@ -7,14 +8,17 @@ export default function GitHubStatsWidget() {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    setError(false);
     Promise.all([
       fetch(`https://api.github.com/users/${GITHUB_USER}`).then((r) => r.json()),
       fetch(`https://api.github.com/users/${GITHUB_USER}/repos?per_page=100&sort=updated`).then((r) => r.json()),
     ])
       .then(([user, repos]) => {
-        // Count languages
+        if (!user || user.message === 'Not Found') throw new Error('GitHub API error');
         const langCount = {};
         (Array.isArray(repos) ? repos : []).forEach((r) => {
           if (r.language) langCount[r.language] = (langCount[r.language] || 0) + 1;
@@ -32,12 +36,14 @@ export default function GitHubStatsWidget() {
           recentRepos: (Array.isArray(repos) ? repos : []).slice(0, 4),
         });
       })
-      .catch(() => setData(null))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   if (loading) return <WidgetShell title="GitHub"><Skeleton /></WidgetShell>;
-  if (!data) return <WidgetShell title="GitHub"><p className="text-sm text-gray-400">Failed to load</p></WidgetShell>;
+  if (error || !data) return <WidgetShell title="GitHub"><WidgetError onRetry={fetchData} /></WidgetShell>;
 
   return (
     <WidgetShell title="GitHub">

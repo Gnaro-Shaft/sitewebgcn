@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
+import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -28,6 +29,7 @@ function PublicLayout({ children }) {
 export default function App() {
   return (
     <ErrorBoundary>
+    <HelmetProvider>
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
@@ -54,6 +56,7 @@ export default function App() {
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
+    </HelmetProvider>
     </ErrorBoundary>
   );
 }

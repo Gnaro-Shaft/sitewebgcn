@@ -1,24 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
+import WidgetError from './WidgetError';
 
 export default function BlogStatsWidget() {
   const { t } = useTranslation();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    setError(false);
     api.get('/articles/admin/all')
       .then((res) => setArticles(res.data.data || []))
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const published = articles.filter((a) => a.published);
   const drafts = articles.filter((a) => !a.published);
   const totalViews = articles.reduce((sum, a) => sum + (a.views || 0), 0);
 
   if (loading) return <WidgetShell title={t('widgets.blog')}><Skeleton /></WidgetShell>;
+  if (error) return <WidgetShell title={t('widgets.blog')}><WidgetError onRetry={fetchData} /></WidgetShell>;
 
   return (
     <WidgetShell title={t('widgets.blog')}>

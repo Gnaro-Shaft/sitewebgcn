@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import Markdown from 'react-markdown';
 import api from '../api/axios';
+import SEO from '../components/SEO';
 
 export default function ArticlePage() {
   const { t, i18n } = useTranslation();
@@ -47,6 +48,12 @@ export default function ArticlePage() {
 
   return (
     <article className="max-w-3xl mx-auto px-4 py-12">
+      <SEO
+        title={article.title}
+        description={article.excerpt || article.content?.slice(0, 160)}
+        url={`https://gcn-data.fr/blog/${article.slug}`}
+        type="article"
+      />
       <Link to="/blog" className="text-sm text-accent hover:underline">
         &larr; {t('blog.backToBlog')}
       </Link>

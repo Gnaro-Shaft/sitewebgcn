@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
+import WidgetError from './WidgetError';
 
 export default function TradesWidget() {
   const { t } = useTranslation();
   const [openPositions, setOpenPositions] = useState([]);
   const [recentTrades, setRecentTrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    setError(false);
     Promise.all([
       api.get('/trading/trades/open'),
       api.get('/trading/trades?limit=10'),
@@ -17,11 +21,14 @@ export default function TradesWidget() {
         setOpenPositions(openRes.data.data || []);
         setRecentTrades(recentRes.data.data || []);
       })
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   if (loading) return <WidgetShell title={t('widgets.trades')}><Skeleton /></WidgetShell>;
+  if (error) return <WidgetShell title={t('widgets.trades')}><WidgetError onRetry={fetchData} /></WidgetShell>;
 
   return (
     <WidgetShell title={t('widgets.trades')}>

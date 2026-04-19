@@ -42,7 +42,10 @@ export default function Skills() {
           setSkills(res.data.data);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Silent fallback to hardcoded skills — not critical for UX
+        console.warn('GitHub skills API unavailable, using fallback');
+      })
       .finally(() => setLoading(false));
   }, []);
 

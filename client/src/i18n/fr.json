@@ -126,6 +126,12 @@
   "footer": {
     "rights": "Tous droits reserves."
   },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur de chargement",
+    "retry": "Reessayer",
+    "saveError": "Erreur de sauvegarde"
+  },
   "theme": {
     "auto": "Auto",
     "light": "Clair",

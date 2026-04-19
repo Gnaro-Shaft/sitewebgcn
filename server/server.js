@@ -39,6 +39,9 @@ app.use(
 // CORS — restrict to known origins
 const allowedOrigins = [
   process.env.CLIENT_URL,
+  'https://gcn-data.fr',
+  'https://www.gcn-data.fr',
+  'https://gcn-backend-api.fly.dev',
   'http://localhost:5173',
   'http://localhost:5001',
 ].filter(Boolean);

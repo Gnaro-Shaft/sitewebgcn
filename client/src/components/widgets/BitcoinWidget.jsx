@@ -27,7 +27,9 @@ export default function CryptoWidget() {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [focusedIdx, setFocusedIdx] = useState(-1);
   const canvasRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const coin = TOP_COINS.find((c) => c.id === selected) || TOP_COINS[0];
 
@@ -130,10 +132,20 @@ export default function CryptoWidget() {
         <h3 className="font-semibold text-gray-900 dark:text-dark-text">{t('widgets.crypto')}</h3>
 
         {/* Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-dark-border hover:border-accent-border transition-colors bg-gray-50 dark:bg-dark-bg3"
+            onClick={() => { setDropdownOpen(!dropdownOpen); setFocusedIdx(-1); }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown' || e.key === 'Enter') {
+                e.preventDefault();
+                setDropdownOpen(true);
+                setFocusedIdx(0);
+              }
+            }}
+            aria-haspopup="listbox"
+            aria-expanded={dropdownOpen}
+            aria-label={`${coin.name} - ${t('widgets.crypto')}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-dark-border hover:border-accent-border transition-colors bg-gray-50 dark:bg-dark-bg3 focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <span className="text-accent font-bold">{coin.symbol}</span>
             <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -144,12 +156,37 @@ export default function CryptoWidget() {
           {dropdownOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 w-48 max-h-64 overflow-y-auto bg-white dark:bg-dark-bg2 border border-gray-200 dark:border-dark-border rounded-xl shadow-xl">
-                {TOP_COINS.map((c) => (
+              <div
+                role="listbox"
+                aria-label="Cryptocurrency list"
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setFocusedIdx((i) => Math.min(i + 1, TOP_COINS.length - 1));
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setFocusedIdx((i) => Math.max(i - 1, 0));
+                  } else if (e.key === 'Enter' && focusedIdx >= 0) {
+                    e.preventDefault();
+                    setSelected(TOP_COINS[focusedIdx].id);
+                    setDropdownOpen(false);
+                  } else if (e.key === 'Escape') {
+                    setDropdownOpen(false);
+                  }
+                }}
+                className="absolute right-0 top-full mt-1 z-20 w-48 max-h-64 overflow-y-auto bg-white dark:bg-dark-bg2 border border-gray-200 dark:border-dark-border rounded-xl shadow-xl"
+              >
+                {TOP_COINS.map((c, idx) => (
                   <button
                     key={c.id}
+                    role="option"
+                    aria-selected={c.id === selected}
+                    ref={(el) => { if (el && focusedIdx === idx) el.focus(); }}
                     onClick={() => { setSelected(c.id); setDropdownOpen(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-dark-bg3 transition-colors ${
+                    onMouseEnter={() => setFocusedIdx(idx)}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors focus:outline-none ${
+                      focusedIdx === idx ? 'bg-gray-50 dark:bg-dark-bg3' : ''
+                    } ${
                       c.id === selected ? 'text-accent font-medium' : 'text-gray-700 dark:text-dark-text'
                     }`}
                   >

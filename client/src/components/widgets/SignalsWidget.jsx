@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
+import WidgetError from './WidgetError';
 
 const LEVEL_LABELS = {
   '-2': { label: 'Strong Sell', color: 'bg-red-500' },
@@ -15,18 +16,24 @@ export default function SignalsWidget() {
   const [signals, setSignals] = useState([]);
   const [distribution, setDistribution] = useState({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    setError(false);
     api.get('/trading/signals?limit=50')
       .then((res) => {
         setSignals(res.data.data || []);
         setDistribution(res.data.distribution || {});
       })
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   if (loading) return <WidgetShell title={t('widgets.signals')}><Skeleton /></WidgetShell>;
+  if (error) return <WidgetShell title={t('widgets.signals')}><WidgetError onRetry={fetchData} /></WidgetShell>;
 
   const total = Object.values(distribution).reduce((s, v) => s + v, 0);
 
