@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import MatrixRain from '../components/ui/MatrixRain';
@@ -9,6 +10,12 @@ import Contact from '../components/sections/Contact';
 
 export default function Home() {
   const { t } = useTranslation();
+
+  // Home page uses snap-scroll — lock body scroll to avoid double scrollbar
+  useEffect(() => {
+    document.body.classList.add('home-page');
+    return () => document.body.classList.remove('home-page');
+  }, []);
 
   return (
     <>

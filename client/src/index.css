@@ -45,6 +45,10 @@
 body {
   @apply bg-white text-gray-900 dark:bg-dark-bg dark:text-dark-text transition-colors duration-300;
   margin: 0;
+}
+
+/* Home page forces no-scroll on body (snap container handles scrolling internally) */
+body.home-page {
   overflow: hidden;
 }
 
