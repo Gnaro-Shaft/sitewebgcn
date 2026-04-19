@@ -3,28 +3,28 @@
     "home": "Accueil",
     "projects": "Projets",
     "blog": "Blog",
-    "about": "A propos",
-    "skills": "Competences",
+    "about": "À propos",
+    "skills": "Compétences",
     "contact": "Contact",
     "dashboard": "Dashboard"
   },
   "hero": {
     "title": "Genaro-Cedric",
-    "subtitle": "Developpeur Fullstack & Ingenieur IA",
-    "description": "Je construis des applications de qualite production — des APIs backend aux dashboards intelligents.",
-    "downloadCv": "Telecharger CV",
+    "subtitle": "Développeur Fullstack & Ingénieur IA",
+    "description": "Je construis des applications de qualité production — des APIs backend aux dashboards intelligents.",
+    "downloadCv": "Télécharger CV",
     "contactMe": "Me contacter"
   },
   "about": {
-    "title": "A propos",
+    "title": "À propos",
     "paragraph1_start": "Fort de plus de ",
-    "paragraph1_highlight": "7 ans d'experience en support informatique N1/N2",
-    "paragraph1_end": ", j'interviens aupres de grands comptes dans des environnements techniques exigeants. Diagnostic et resolution d'incidents complexes, analyse des systemes et des flux techniques, gestion des postes utilisateurs et environnements critiques — autant de missions qui ont forge ma rigueur et ma capacite d'adaptation.",
-    "paragraph2": "Ces experiences m'ont permis de developper une expertise en Python et en analyse de donnees, en mettant l'accent sur la resolution de problemes et l'amelioration continue.",
-    "paragraph3_start": "Actuellement, je me specialise dans les domaines de la ",
+    "paragraph1_highlight": "7 ans d'expérience en support informatique N1/N2",
+    "paragraph1_end": ", j'interviens auprès de grands comptes dans des environnements techniques exigeants. Diagnostic et résolution d'incidents complexes, analyse des systèmes et des flux techniques, gestion des postes utilisateurs et environnements critiques — autant de missions qui ont forgé ma rigueur et ma capacité d'adaptation.",
+    "paragraph2": "Ces expériences m'ont permis de développer une expertise en Python et en analyse de données, en mettant l'accent sur la résolution de problèmes et l'amélioration continue.",
+    "paragraph3_start": "Actuellement, je me spécialise dans les domaines de la ",
     "paragraph3_highlight": "Data et de l'intelligence artificielle",
-    "paragraph3_end": ", en renforcant mes competences en Python, analyse de donnees et automatisation. Mon objectif est d'evoluer vers des roles en Data/AI Engineering, avec une attention particuliere portee aux systemes intelligents et a l'apprentissage automatique.",
-    "paragraph4": "Je suis motive par le developpement de solutions innovantes et performantes, tout en contribuant a des projets techniques impactants.",
+    "paragraph3_end": ", en renforçant mes compétences en Python, analyse de données et automatisation. Mon objectif est d'évoluer vers des rôles en Data/AI Engineering, avec une attention particulière portée aux systèmes intelligents et à l'apprentissage automatique.",
+    "paragraph4": "Je suis motivé par le développement de solutions innovantes et performantes, tout en contribuant à des projets techniques impactants.",
     "timeline": {
       "support": "Support IT",
       "supportPeriod": "7+ ans",
@@ -33,10 +33,10 @@
       "ai": "Data / IA",
       "aiPeriod": "En cours"
     },
-    "githubActivity": "Activite GitHub"
+    "githubActivity": "Activité GitHub"
   },
   "skills": {
-    "title": "Competences",
+    "title": "Compétences",
     "groups": {
       "frontend": "Frontend & Mobile",
       "ai": "IA & Python",
@@ -49,7 +49,7 @@
     "all": "Tous",
     "noProjects": "Aucun projet pour le moment.",
     "code": "Code",
-    "live": "Demo",
+    "live": "Démo",
     "featured": "Projet signature"
   },
   "contact": {
@@ -60,8 +60,8 @@
     "message": "Votre message",
     "send": "Envoyer",
     "sending": "Envoi en cours...",
-    "success": "Message envoye avec succes !",
-    "error": "Echec de l'envoi. Veuillez reessayer."
+    "success": "Message envoyé avec succès !",
+    "error": "Échec de l'envoi. Veuillez réessayer."
   },
   "blog": {
     "title": "Blog",
@@ -72,7 +72,7 @@
   },
   "login": {
     "title": "Dashboard",
-    "subtitle": "Connectez-vous pour acceder a votre cockpit",
+    "subtitle": "Connectez-vous pour accéder à votre cockpit",
     "email": "Email",
     "password": "Mot de passe",
     "signIn": "Se connecter",
@@ -81,9 +81,9 @@
   "dashboard": {
     "welcomeBack": "Bon retour,",
     "subtitle": "Votre cockpit personnel",
-    "logout": "Deconnexion",
+    "logout": "Déconnexion",
     "configWidgets": "Configurer les widgets",
-    "noWidgets": "Aucun widget active",
+    "noWidgets": "Aucun widget activé",
     "configure": "Configurer",
     "configTitle": "Configurer les widgets",
     "cancel": "Annuler",
@@ -98,20 +98,20 @@
     "signals": "Signaux",
     "openPositions": "Positions ouvertes",
     "noOpenPositions": "Aucune position ouverte",
-    "recentTrades": "Trades recents",
+    "recentTrades": "Trades récents",
     "noTrades": "Aucun trade",
     "avgWin": "Gain moyen",
     "avgLoss": "Perte moyenne",
-    "cumulativePnl": "PnL cumule",
+    "cumulativePnl": "PnL cumulé",
     "days": "jours",
     "winrate": "Winrate",
     "profitFactor": "Profit Factor",
     "totalTrades": "Total trades",
     "topLanguages": "Langages principaux",
-    "recentActivity": "Activite recente",
+    "recentActivity": "Activité récente",
     "publicRepos": "repos publics",
-    "recentArticles": "Articles recents",
-    "published": "publie(s)",
+    "recentArticles": "Articles récents",
+    "published": "publié(s)",
     "drafts": "brouillon(s)",
     "totalViews": "vues totales",
     "lastSignals": "Derniers signaux",
@@ -123,15 +123,15 @@
   },
   "notFound": {
     "title": "Page introuvable",
-    "goHome": "Retour a l'accueil"
+    "goHome": "Retour à l'accueil"
   },
   "footer": {
-    "rights": "Tous droits reserves."
+    "rights": "Tous droits réservés."
   },
   "common": {
     "loading": "Chargement...",
     "error": "Erreur de chargement",
-    "retry": "Reessayer",
+    "retry": "Réessayer",
     "saveError": "Erreur de sauvegarde"
   },
   "theme": {
