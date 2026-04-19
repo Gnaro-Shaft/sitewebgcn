@@ -35,6 +35,18 @@ const projectSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+    longDescription: {
+      type: String,
+      trim: true,
+    },
+    highlights: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

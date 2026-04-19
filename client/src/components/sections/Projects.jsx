@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 import ProjectCard from '../ui/ProjectCard';
+import FeaturedProject from '../ui/FeaturedProject';
 import useInView from '../../hooks/useInView';
 
 export default function Projects({ limit }) {
@@ -31,11 +32,19 @@ export default function Projects({ limit }) {
     fetchProjects();
   }, [fetchProjects]);
 
-  const filtered = filter
-    ? projects.filter((p) => p.stack?.includes(filter))
-    : projects;
+  // Separate featured project from regular grid
+  const featured = projects.find((p) => p.featured);
+  const rest = projects.filter((p) => !p.featured);
 
-  const displayed = limit ? filtered.slice(0, limit) : filtered;
+  const filtered = filter
+    ? rest.filter((p) => p.stack?.includes(filter))
+    : rest;
+
+  // When filtering, don't show featured separately
+  const showFeatured = !filter && featured;
+  const displayed = limit
+    ? filtered.slice(0, showFeatured ? limit - 1 : limit)
+    : filtered;
   const skeletonCount = limit || 6;
 
   return (
@@ -95,15 +104,27 @@ export default function Projects({ limit }) {
             <ProjectCardSkeleton key={i} />
           ))}
         </div>
-      ) : displayed.length === 0 ? (
+      ) : displayed.length === 0 && !showFeatured ? (
         <p className="text-gray-500 dark:text-dark-muted">{t('projects.noProjects')}</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {displayed.map((p, i) => (
-            <div key={p._id} className={`transition-all duration-500 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${(i + 1) * 100}ms` }}>
-              <ProjectCard project={p} />
+        <div className="space-y-6">
+          {/* Featured project */}
+          {showFeatured && (
+            <div className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+              <FeaturedProject project={featured} />
             </div>
-          ))}
+          )}
+
+          {/* Regular grid */}
+          {displayed.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {displayed.map((p, i) => (
+                <div key={p._id} className={`transition-all duration-500 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${(i + 1) * 100}ms` }}>
+                  <ProjectCard project={p} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

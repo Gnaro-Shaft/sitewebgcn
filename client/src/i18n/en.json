@@ -49,7 +49,8 @@
     "all": "All",
     "noProjects": "No projects yet.",
     "code": "Code",
-    "live": "Live"
+    "live": "Live",
+    "featured": "Signature project"
   },
   "contact": {
     "title": "Contact",
