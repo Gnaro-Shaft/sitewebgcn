@@ -51,6 +51,27 @@ export default function AdminDrafts() {
     }
   };
 
+  const handleSocialPublish = async (id) => {
+    setSaving(true);
+    try {
+      const res = await api.post(`/articles/${id}/social-publish`);
+      fetchArticles();
+      if (selected?._id === id && res.data.data?.article) {
+        setSelected(res.data.data.article);
+      }
+      const r = res.data.data?.results || {};
+      const linkedinOk = r.linkedin?.success;
+      const linkedinSkipped = r.linkedin?.skipped;
+      alert(
+        `LinkedIn: ${linkedinOk ? 'OK' : linkedinSkipped ? 'Non configure' : 'Echec'}`
+      );
+    } catch (err) {
+      alert('Erreur: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!editing) return;
     setSaving(true);
@@ -155,6 +176,7 @@ export default function AdminDrafts() {
                 article={selected}
                 onEdit={() => setEditing({ ...selected })}
                 onPublishToggle={() => handlePublishToggle(selected._id)}
+                onSocialPublish={() => handleSocialPublish(selected._id)}
                 onDelete={() => handleDelete(selected._id)}
                 saving={saving}
                 t={t}
@@ -164,6 +186,30 @@ export default function AdminDrafts() {
         </div>
       </main>
     </div>
+  );
+}
+
+function SocialBadges({ socialPosted = {} }) {
+  return (
+    <div className="flex items-center gap-1">
+      <SocialBadge label="LinkedIn" posted={socialPosted.linkedin} />
+      <SocialBadge label="X" posted={socialPosted.x} />
+    </div>
+  );
+}
+
+function SocialBadge({ label, posted }) {
+  return (
+    <span
+      className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${
+        posted
+          ? 'bg-blue-500/10 text-blue-500'
+          : 'bg-gray-100 dark:bg-dark-bg3 text-gray-400'
+      }`}
+      title={posted ? `Poste sur ${label}` : `Pas encore poste sur ${label}`}
+    >
+      {posted ? '✓' : '·'} {label}
+    </span>
   );
 }
 
@@ -186,12 +232,12 @@ function ArticleItem({ article, selected, onClick }) {
   );
 }
 
-function PreviewMode({ article, onEdit, onPublishToggle, onDelete, saving, t }) {
+function PreviewMode({ article, onEdit, onPublishToggle, onSocialPublish, onDelete, saving, t }) {
   return (
     <div>
       <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-200 dark:border-dark-border">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
               article.published
                 ? 'bg-accent/10 text-accent'
@@ -199,6 +245,9 @@ function PreviewMode({ article, onEdit, onPublishToggle, onDelete, saving, t }) 
             }`}>
               {article.published ? t('drafts.live') : t('drafts.draft')}
             </span>
+            {article.published && (
+              <SocialBadges socialPosted={article.socialPosted} />
+            )}
             {article.tags?.map((tag) => (
               <span key={tag} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-dark-bg3 text-gray-500 dark:text-dark-muted">{tag}</span>
             ))}
@@ -207,7 +256,7 @@ function PreviewMode({ article, onEdit, onPublishToggle, onDelete, saving, t }) 
           {article.excerpt && <p className="mt-2 text-sm text-gray-600 dark:text-dark-muted">{article.excerpt}</p>}
         </div>
 
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap justify-end">
           <button
             onClick={onEdit}
             disabled={saving}
@@ -226,6 +275,19 @@ function PreviewMode({ article, onEdit, onPublishToggle, onDelete, saving, t }) 
           >
             {article.published ? t('drafts.unpublish') : t('drafts.publish')}
           </button>
+          {article.published && onSocialPublish && (
+            <button
+              onClick={onSocialPublish}
+              disabled={saving}
+              title="Re-poster sur les reseaux sociaux"
+              className="px-3 py-1.5 text-sm border border-blue-500 text-blue-500 hover:bg-blue-500/10 rounded-lg font-medium transition-all disabled:opacity-40 flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Re-publier
+            </button>
+          )}
           <button
             onClick={onDelete}
             disabled={saving}

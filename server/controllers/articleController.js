@@ -1,5 +1,6 @@
 const Article = require('../models/Article');
 const asyncHandler = require('../middleware/asyncHandler');
+const { publishToAll } = require('../services/SocialPublisher');
 
 // GET /api/articles — public, only published (with pagination)
 exports.getArticles = asyncHandler(async (req, res) => {
@@ -72,11 +73,61 @@ exports.publishArticle = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Article not found' });
   }
 
+  const wasPublished = article.published;
   article.published = !article.published;
   article.publishedAt = article.published ? new Date() : null;
   await article.save();
 
-  res.json({ success: true, data: article });
+  // Trigger social publish on FIRST publication only (not republish)
+  let socialResults = null;
+  const isFirstPublish = article.published && !wasPublished &&
+    !article.socialPosted?.linkedin && !article.socialPosted?.x;
+
+  if (isFirstPublish) {
+    // Fire-and-forget: don't block the response on social posting
+    publishToAll(article)
+      .then(async (results) => {
+        // Update socialPosted flags after webhooks return
+        article.socialPosted = {
+          linkedin: !!results.linkedin?.success,
+          x: !!results.x?.success,
+        };
+        await article.save();
+        console.log(`Social publish for "${article.title}":`, {
+          linkedin: results.linkedin?.success ? 'OK' : (results.linkedin?.skipped ? 'skipped' : 'FAIL'),
+          x: results.x?.success ? 'OK' : (results.x?.skipped ? 'skipped' : 'FAIL'),
+        });
+      })
+      .catch((err) => console.error('Social publish error:', err));
+
+    socialResults = { triggered: true };
+  }
+
+  res.json({ success: true, data: article, social: socialResults });
+});
+
+// POST /api/articles/:id/social-publish — admin, manually trigger social post
+exports.triggerSocialPublish = asyncHandler(async (req, res) => {
+  const article = await Article.findById(req.params.id);
+
+  if (!article) {
+    return res.status(404).json({ success: false, error: 'Article not found' });
+  }
+
+  if (!article.published) {
+    return res.status(400).json({ success: false, error: 'Article must be published first' });
+  }
+
+  const results = await publishToAll(article);
+
+  // Update flags
+  article.socialPosted = {
+    linkedin: !!results.linkedin?.success || article.socialPosted?.linkedin,
+    x: !!results.x?.success || article.socialPosted?.x,
+  };
+  await article.save();
+
+  res.json({ success: true, data: { article, results } });
 });
 
 // DELETE /api/articles/:id — admin

@@ -7,6 +7,7 @@ const {
   createArticle,
   updateArticle,
   publishArticle,
+  triggerSocialPublish,
   deleteArticle,
 } = require('../controllers/articleController');
 const { protect, adminOnly } = require('../middleware/auth');
@@ -16,6 +17,7 @@ const { validateArticle } = require('../middleware/validate');
 router.get('/admin/all', protect, adminOnly, getAllArticles);
 router.post('/', protect, adminOnly, validateArticle, createArticle);
 router.patch('/:id/publish', protect, adminOnly, publishArticle);
+router.post('/:id/social-publish', protect, adminOnly, triggerSocialPublish);
 router.patch('/:id', protect, adminOnly, updateArticle);
 router.delete('/:id', protect, adminOnly, deleteArticle);
 
