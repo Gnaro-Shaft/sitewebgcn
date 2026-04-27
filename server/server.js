@@ -98,6 +98,9 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'API is running' });
 });
 
+// Dynamic sitemap (must be before SPA fallback)
+app.get('/sitemap.xml', require('./controllers/sitemapController').getSitemap);
+
 // Routes
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/projects', require('./routes/projects'));

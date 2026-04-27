@@ -32,6 +32,9 @@ export default function SEO({ title, description, image, url, type = 'website' }
       <meta property="og:title" content={seoTitle} />
       <meta property="og:description" content={seoDescription} />
       <meta property="og:image" content={seoImage} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content="Genaro-Cedric NISUS - Portfolio" />
       <meta property="og:url" content={seoUrl} />
       <meta property="og:site_name" content="Genaro-Cedric NISUS" />
       <meta property="og:locale" content={lang === 'fr' ? 'fr_FR' : 'en_US'} />
@@ -41,6 +44,7 @@ export default function SEO({ title, description, image, url, type = 'website' }
       <meta name="twitter:title" content={seoTitle} />
       <meta name="twitter:description" content={seoDescription} />
       <meta name="twitter:image" content={seoImage} />
+      <meta name="twitter:image:alt" content="Genaro-Cedric NISUS - Portfolio" />
 
       {/* Canonical */}
       <link rel="canonical" href={seoUrl} />
