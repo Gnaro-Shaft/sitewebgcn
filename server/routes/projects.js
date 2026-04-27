@@ -7,12 +7,16 @@ const {
   createProject,
   updateProject,
   deleteProject,
+  listGithubReposToImport,
+  importFromGithub,
 } = require('../controllers/projectController');
 const { protect, adminOnly } = require('../middleware/auth');
 const { validateProject } = require('../middleware/validate');
 
-// Admin (before :id to avoid route conflict)
+// Admin endpoints (before :id to avoid route conflicts)
 router.get('/admin/all', protect, adminOnly, getAllProjects);
+router.get('/github-import', protect, adminOnly, listGithubReposToImport);
+router.post('/github-import', protect, adminOnly, importFromGithub);
 
 // Public
 router.get('/', getProjects);

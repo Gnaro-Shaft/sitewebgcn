@@ -13,6 +13,7 @@ import ArticlePage from './pages/ArticlePage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDrafts from './pages/AdminDrafts';
+import AdminProjects from './pages/AdminProjects';
 import NotFound from './pages/NotFound';
 
 function PublicLayout({ children }) {
@@ -52,6 +53,13 @@ export default function App() {
             <Route path="/admin/drafts" element={
               <ProtectedRoute>
                 <AdminDrafts />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin projects management */}
+            <Route path="/admin/projects" element={
+              <ProtectedRoute>
+                <AdminProjects />
               </ProtectedRoute>
             } />
 

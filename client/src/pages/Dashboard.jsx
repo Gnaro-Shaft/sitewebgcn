@@ -96,6 +96,26 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-4">
             <SessionTimer />
+            <a
+              href="/admin/projects"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
+              title="Admin projects"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              Projects
+            </a>
+            <a
+              href="/admin/drafts"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
+              title="Admin drafts"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Articles
+            </a>
             <button
               onClick={() => setShowConfig(true)}
               className="p-2 text-gray-500 dark:text-dark-muted hover:text-accent transition-colors"

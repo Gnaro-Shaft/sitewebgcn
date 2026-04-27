@@ -139,6 +139,28 @@
     "articleGenerated": "Article generated and saved as draft",
     "reviewDraft": "Review and publish"
   },
+  "adminProjects": {
+    "title": "Project management",
+    "public": "Public",
+    "hidden": "Hidden",
+    "noPublic": "No public projects",
+    "noHidden": "No hidden projects",
+    "selectToPreview": "Select a project to preview",
+    "live": "Live",
+    "hiddenStatus": "Hidden",
+    "hide": "Hide",
+    "publish": "Publish",
+    "longDescription": "Long description",
+    "highlights": "Highlights",
+    "isPublic": "Publish on site",
+    "featured": "Signature project (★)",
+    "importGithub": "Import from GitHub",
+    "noNewRepos": "All your public GitHub repos are already imported or hidden.",
+    "selectReposHelp": "Select repos to import. They will be created as hidden — enrich them then publish.",
+    "selected": "selected",
+    "importSelected": "Import",
+    "deleteConfirm": "Permanently delete this project?"
+  },
   "drafts": {
     "title": "Article management",
     "drafts": "Drafts",

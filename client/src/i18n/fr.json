@@ -139,6 +139,28 @@
     "articleGenerated": "Article généré et sauvegardé en brouillon",
     "reviewDraft": "Réviser et publier"
   },
+  "adminProjects": {
+    "title": "Gestion des projets",
+    "public": "Publics",
+    "hidden": "Caches",
+    "noPublic": "Aucun projet public",
+    "noHidden": "Aucun projet cache",
+    "selectToPreview": "Selectionne un projet pour le visualiser",
+    "live": "En ligne",
+    "hiddenStatus": "Cache",
+    "hide": "Cacher",
+    "publish": "Publier",
+    "longDescription": "Description longue",
+    "highlights": "Points forts",
+    "isPublic": "Publier sur le site",
+    "featured": "Projet signature (★)",
+    "importGithub": "Importer depuis GitHub",
+    "noNewRepos": "Tous tes repos GitHub publics sont deja importes ou caches.",
+    "selectReposHelp": "Selectionne les repos a importer. Ils seront crees en mode cache, tu pourras ensuite les enrichir et les publier.",
+    "selected": "selectionne(s)",
+    "importSelected": "Importer",
+    "deleteConfirm": "Supprimer definitivement ce projet ?"
+  },
   "drafts": {
     "title": "Gestion des articles",
     "drafts": "Brouillons",
