@@ -11,7 +11,7 @@ export default function Footer() {
         </p>
         <div className="flex items-center gap-4">
           <a
-            href="https://github.com/gnaro-shaft"
+            href="https://github.com/Gnaro-Shaft"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-500 dark:text-dark-muted hover:text-accent transition-colors"

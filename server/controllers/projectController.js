@@ -1,7 +1,7 @@
 const Project = require('../models/Project');
 const asyncHandler = require('../middleware/asyncHandler');
 
-const GITHUB_USER = 'gnaro-shaft';
+const GITHUB_USER = 'Gnaro-Shaft';
 
 // GET /api/projects — public, only isPublic: true
 exports.getProjects = asyncHandler(async (req, res) => {

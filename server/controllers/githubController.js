@@ -1,6 +1,6 @@
 const asyncHandler = require('../middleware/asyncHandler');
 
-const GITHUB_USER = 'gnaro-shaft';
+const GITHUB_USER = 'Gnaro-Shaft';
 
 // In-memory cache (1h TTL)
 let skillsCache = null;

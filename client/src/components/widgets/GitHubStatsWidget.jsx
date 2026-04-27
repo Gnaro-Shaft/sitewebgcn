@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import WidgetError from './WidgetError';
 
-const GITHUB_USER = 'gnaro-shaft';
+const GITHUB_USER = 'Gnaro-Shaft';
 
 export default function GitHubStatsWidget() {
   const { t } = useTranslation();

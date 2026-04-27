@@ -11,7 +11,7 @@ const DARK_THEME = {
   dark: ['#161b22', '#0d3f26', '#007a3d', '#00b85c', '#00ff88'],
 };
 
-export default function GitHubHeatmap({ username = 'gnaro-shaft' }) {
+export default function GitHubHeatmap({ username = 'Gnaro-Shaft' }) {
   const { theme } = useTheme();
   const { i18n } = useTranslation();
 
