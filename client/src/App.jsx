@@ -14,7 +14,14 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDrafts from './pages/AdminDrafts';
 import AdminProjects from './pages/AdminProjects';
+import AdminAnalytics from './pages/AdminAnalytics';
 import NotFound from './pages/NotFound';
+import { usePageTracking } from './utils/analytics';
+
+function AnalyticsTracker() {
+  usePageTracking();
+  return null;
+}
 
 function PublicLayout({ children }) {
   return (
@@ -35,6 +42,7 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
+          <AnalyticsTracker />
           <Routes>
             {/* Home — full-screen snap layout, no wrapper */}
             <Route path="/" element={<><Navbar /><Home /></>} />
@@ -60,6 +68,13 @@ export default function App() {
             <Route path="/admin/projects" element={
               <ProtectedRoute>
                 <AdminProjects />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin analytics */}
+            <Route path="/admin/analytics" element={
+              <ProtectedRoute>
+                <AdminAnalytics />
               </ProtectedRoute>
             } />
 

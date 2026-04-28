@@ -111,6 +111,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/trading', require('./routes/trading'));
 app.use('/api/github', require('./routes/github'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {
