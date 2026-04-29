@@ -101,6 +101,9 @@ app.get('/api/health', (req, res) => {
 // Dynamic sitemap (must be before SPA fallback)
 app.get('/sitemap.xml', require('./controllers/sitemapController').getSitemap);
 
+// RSS feed (must be before SPA fallback)
+app.get('/rss.xml', require('./controllers/rssController').getRssFeed);
+
 // Routes
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/projects', require('./routes/projects'));
