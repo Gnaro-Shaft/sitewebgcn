@@ -1,22 +1,25 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import RouteLoading from './components/RouteLoading';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Home from './pages/Home';
-import ProjectsPage from './pages/ProjectsPage';
-import BlogPage from './pages/BlogPage';
-import ArticlePage from './pages/ArticlePage';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import AdminDrafts from './pages/AdminDrafts';
-import AdminProjects from './pages/AdminProjects';
-import AdminAnalytics from './pages/AdminAnalytics';
 import NotFound from './pages/NotFound';
 import { usePageTracking } from './utils/analytics';
+
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
+const BlogPage = lazy(() => import('./pages/BlogPage'));
+const ArticlePage = lazy(() => import('./pages/ArticlePage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AdminDrafts = lazy(() => import('./pages/AdminDrafts'));
+const AdminProjects = lazy(() => import('./pages/AdminProjects'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
 
 function AnalyticsTracker() {
   usePageTracking();
@@ -43,47 +46,49 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <AnalyticsTracker />
-          <Routes>
-            {/* Home — full-screen snap layout, no wrapper */}
-            <Route path="/" element={<><Navbar /><Home /></>} />
+          <Suspense fallback={<RouteLoading />}>
+            <Routes>
+              {/* Home — full-screen snap layout, no wrapper */}
+              <Route path="/" element={<><Navbar /><Home /></>} />
 
-            {/* Login — standalone layout */}
-            <Route path="/login" element={<Login />} />
+              {/* Login — standalone layout */}
+              <Route path="/login" element={<Login />} />
 
-            {/* Dashboard — protected, own layout */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
+              {/* Dashboard — protected, own layout */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
 
-            {/* Admin drafts review */}
-            <Route path="/admin/drafts" element={
-              <ProtectedRoute>
-                <AdminDrafts />
-              </ProtectedRoute>
-            } />
+              {/* Admin drafts review */}
+              <Route path="/admin/drafts" element={
+                <ProtectedRoute>
+                  <AdminDrafts />
+                </ProtectedRoute>
+              } />
 
-            {/* Admin projects management */}
-            <Route path="/admin/projects" element={
-              <ProtectedRoute>
-                <AdminProjects />
-              </ProtectedRoute>
-            } />
+              {/* Admin projects management */}
+              <Route path="/admin/projects" element={
+                <ProtectedRoute>
+                  <AdminProjects />
+                </ProtectedRoute>
+              } />
 
-            {/* Admin analytics */}
-            <Route path="/admin/analytics" element={
-              <ProtectedRoute>
-                <AdminAnalytics />
-              </ProtectedRoute>
-            } />
+              {/* Admin analytics */}
+              <Route path="/admin/analytics" element={
+                <ProtectedRoute>
+                  <AdminAnalytics />
+                </ProtectedRoute>
+              } />
 
-            {/* Public pages with shared layout */}
-            <Route path="/projects" element={<PublicLayout><ProjectsPage /></PublicLayout>} />
-            <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
-            <Route path="/blog/:slug" element={<PublicLayout><ArticlePage /></PublicLayout>} />
-            <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
-          </Routes>
+              {/* Public pages with shared layout */}
+              <Route path="/projects" element={<PublicLayout><ProjectsPage /></PublicLayout>} />
+              <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
+              <Route path="/blog/:slug" element={<PublicLayout><ArticlePage /></PublicLayout>} />
+              <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
