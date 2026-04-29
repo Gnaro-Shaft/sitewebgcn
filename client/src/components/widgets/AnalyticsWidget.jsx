@@ -47,10 +47,10 @@ export default function AnalyticsWidget() {
           <div className="flex items-end gap-1 h-16">
             {data.daily.map((d) => (
               <div
-                key={d.date}
+                key={d.bucket}
                 className="flex-1 bg-accent/30 hover:bg-accent rounded-sm transition-colors"
                 style={{ height: `${(d.views / max) * 100}%`, minHeight: '2px' }}
-                title={`${d.date}: ${d.views} views`}
+                title={`${d.bucket}: ${d.views} views`}
               />
             ))}
           </div>

@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   trackPageView,
   getSummary,
+  getTimeseries,
   getArticleStats,
 } = require('../controllers/analyticsController');
 const { protect, adminOnly } = require('../middleware/auth');
@@ -18,6 +19,7 @@ const trackLimiter = rateLimit({
 
 router.post('/track', trackLimiter, trackPageView);
 router.get('/summary', protect, adminOnly, getSummary);
+router.get('/timeseries', protect, adminOnly, getTimeseries);
 router.get('/articles', protect, adminOnly, getArticleStats);
 
 module.exports = router;

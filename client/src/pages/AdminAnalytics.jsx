@@ -1,28 +1,52 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 
 const PERIODS = [
+  { id: '24h', label: '24h' },
   { id: '7d', label: '7d' },
   { id: '30d', label: '30d' },
   { id: 'all', label: 'All' },
+  { id: 'custom', label: 'Custom' },
 ];
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysAgoIso(n) {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 
 export default function AdminAnalytics() {
   const { t } = useTranslation();
   const [period, setPeriod] = useState('7d');
+  const [customStart, setCustomStart] = useState(daysAgoIso(7));
+  const [customEnd, setCustomEnd] = useState(todayIso());
+  const [appliedRange, setAppliedRange] = useState(null);
   const [data, setData] = useState(null);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [exportMenu, setExportMenu] = useState(false);
+
+  const queryString = useMemo(() => {
+    if (period === 'custom' && appliedRange) {
+      const start = new Date(appliedRange.start).toISOString();
+      const end = new Date(appliedRange.end + 'T23:59:59').toISOString();
+      return `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+    }
+    return `period=${period}`;
+  }, [period, appliedRange]);
 
   const fetchData = useCallback(() => {
+    if (period === 'custom' && !appliedRange) return;
     setLoading(true);
     setError(false);
     Promise.all([
-      api.get(`/analytics/summary?period=${period}`),
-      api.get(`/analytics/articles?period=${period}`),
+      api.get(`/analytics/summary?${queryString}`),
+      api.get(`/analytics/articles?${queryString}`),
     ])
       .then(([sum, art]) => {
         setData(sum.data.data);
@@ -30,21 +54,18 @@ export default function AdminAnalytics() {
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [queryString, period, appliedRange]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const exportCsv = () => {
-    if (!data) return;
-    const rows = [
-      ['type', 'key', 'views'],
-      ...data.topPages.map((p) => ['page', p.path, p.views]),
-      ...data.topReferrers.map((r) => ['referrer', r.source || 'direct', r.views]),
-      ...data.countries.map((c) => ['country', c.country, c.views]),
-      ...articles.map((a) => ['article', a.slug, a.views]),
-    ];
+  const applyCustom = () => {
+    if (!customStart || !customEnd) return;
+    setAppliedRange({ start: customStart, end: customEnd });
+  };
+
+  const downloadCsv = (rows, suffix) => {
     const csv = rows
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
       .join('\n');
@@ -52,9 +73,46 @@ export default function AdminAnalytics() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `analytics-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `analytics-${suffix}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportAggregated = () => {
+    if (!data) return;
+    setExportMenu(false);
+    const rows = [
+      ['type', 'key', 'views'],
+      ...data.topPages.map((p) => ['page', p.path, p.views]),
+      ...data.topReferrers.map((r) => ['referrer', r.source || 'direct', r.views]),
+      ...data.countries.map((c) => ['country', c.country, c.views]),
+      ...data.deviceSplit.map((d) => ['device', d.device, d.views]),
+      ...articles.map((a) => ['article', a.slug, a.views]),
+    ];
+    downloadCsv(rows, `aggregated-${period}`);
+  };
+
+  const exportDetailed = async () => {
+    setExportMenu(false);
+    try {
+      const res = await api.get(`/analytics/timeseries?${queryString}`);
+      const { rows: tsRows, granularity } = res.data.data;
+      const rows = [
+        ['bucket', 'granularity', 'views', 'unique', 'mobile', 'tablet', 'desktop'],
+        ...tsRows.map((r) => [
+          r.bucket,
+          granularity,
+          r.views,
+          r.unique,
+          r.mobile,
+          r.tablet,
+          r.desktop,
+        ]),
+      ];
+      downloadCsv(rows, `detailed-${period}-${granularity}`);
+    } catch {
+      setError(true);
+    }
   };
 
   return (
@@ -88,13 +146,37 @@ export default function AdminAnalytics() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={exportCsv}
-              disabled={!data}
-              className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors disabled:opacity-50"
-            >
-              {t('analytics.exportCsv')}
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setExportMenu((v) => !v)}
+                disabled={!data}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors disabled:opacity-50"
+              >
+                {t('analytics.exportCsv')} ▾
+              </button>
+              {exportMenu && (
+                <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-dark-bg2 border border-gray-200 dark:border-dark-border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <button
+                    onClick={exportAggregated}
+                    className="block w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-dark-bg3"
+                  >
+                    <div className="font-medium text-gray-900 dark:text-dark-text">
+                      {t('analytics.exportAggregated')}
+                    </div>
+                    <div className="text-gray-500 dark:text-dark-muted">{t('analytics.exportAggregatedHint')}</div>
+                  </button>
+                  <button
+                    onClick={exportDetailed}
+                    className="block w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-dark-bg3 border-t border-gray-100 dark:border-dark-border"
+                  >
+                    <div className="font-medium text-gray-900 dark:text-dark-text">
+                      {t('analytics.exportDetailed')}
+                    </div>
+                    <div className="text-gray-500 dark:text-dark-muted">{t('analytics.exportDetailedHint')}</div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -104,17 +186,59 @@ export default function AdminAnalytics() {
           {t('analytics.title')}
         </h1>
 
+        {period === 'custom' && (
+          <div className="mb-6 p-4 bg-white dark:bg-dark-bg2 rounded-xl border border-gray-200 dark:border-dark-border flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">{t('analytics.startDate')}</label>
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="px-3 py-1.5 text-sm bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">{t('analytics.endDate')}</label>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart}
+                max={todayIso()}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="px-3 py-1.5 text-sm bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg"
+              />
+            </div>
+            <button
+              onClick={applyCustom}
+              className="px-4 py-1.5 text-sm font-medium bg-accent hover:bg-accent-hover text-dark-bg rounded-lg transition-colors"
+            >
+              {t('analytics.apply')}
+            </button>
+            {appliedRange && (
+              <span className="text-xs text-gray-500 dark:text-dark-muted">
+                {appliedRange.start} → {appliedRange.end}
+              </span>
+            )}
+          </div>
+        )}
+
         {loading && <div className="text-gray-400 dark:text-dark-muted">Loading…</div>}
         {error && (
           <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
             {t('analytics.loadError')}
           </div>
         )}
+        {period === 'custom' && !appliedRange && !loading && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 rounded-lg text-sm">
+            {t('analytics.pickDates')}
+          </div>
+        )}
 
         {data && !loading && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <KPI label={t('widgets.views7d').replace('7j', period).replace('7d', period)} value={data.totalViews} accent />
+              <KPI label={t('analytics.totalViews')} value={data.totalViews} accent />
               <KPI label={t('widgets.uniqueVisitors')} value={data.uniqueVisitors} />
               <KPI
                 label={t('widgets.mobile')}
@@ -123,8 +247,8 @@ export default function AdminAnalytics() {
               <KPI label={t('analytics.pages')} value={data.topPages.length} />
             </div>
 
-            <Card title={t('widgets.dailyTrend')}>
-              <DailyChart daily={data.daily} />
+            <Card title={data.granularity === 'hour' ? t('analytics.hourlyTrend') : t('widgets.dailyTrend')}>
+              <BucketChart daily={data.daily} granularity={data.granularity} />
             </Card>
 
             <div className="grid md:grid-cols-2 gap-4 mt-4">
@@ -228,27 +352,35 @@ function List({ items, empty, mono }) {
   );
 }
 
-function DailyChart({ daily }) {
+function formatBucket(b, granularity) {
+  if (granularity === 'hour') {
+    const [date, hour] = b.split('T');
+    return `${date} ${hour}`;
+  }
+  return b;
+}
+
+function BucketChart({ daily, granularity }) {
   if (!daily.length) return <p className="text-sm text-gray-400 dark:text-dark-muted">No data</p>;
   const max = Math.max(...daily.map((d) => d.views), 1);
   return (
     <div>
       <div className="flex items-end gap-1 h-32">
         {daily.map((d) => (
-          <div key={d.date} className="flex-1 flex flex-col items-center justify-end group relative">
+          <div key={d.bucket} className="flex-1 flex flex-col items-center justify-end group relative">
             <div
               className="w-full bg-accent/40 hover:bg-accent rounded-t transition-colors"
               style={{ height: `${(d.views / max) * 100}%`, minHeight: '2px' }}
             />
             <div className="absolute bottom-full mb-1 hidden group-hover:block bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-20">
-              {d.date}: {d.views} ({d.unique} unique)
+              {formatBucket(d.bucket, granularity)}: {d.views} ({d.unique} unique)
             </div>
           </div>
         ))}
       </div>
       <div className="flex justify-between mt-2 text-xs text-gray-400 dark:text-dark-muted">
-        <span>{daily[0]?.date}</span>
-        <span>{daily[daily.length - 1]?.date}</span>
+        <span>{formatBucket(daily[0]?.bucket, granularity)}</span>
+        <span>{formatBucket(daily[daily.length - 1]?.bucket, granularity)}</span>
       </div>
     </div>
   );

@@ -151,6 +151,10 @@
   "analytics": {
     "title": "Analytics",
     "exportCsv": "Export CSV",
+    "exportAggregated": "Aggregated export",
+    "exportAggregatedHint": "Top pages, referrers, countries — summary",
+    "exportDetailed": "Detailed export",
+    "exportDetailedHint": "One row per day or per hour",
     "loadError": "Error loading data",
     "pages": "Pages",
     "devices": "Devices",
@@ -159,6 +163,12 @@
     "slug": "Slug",
     "views": "Views",
     "unique": "Unique",
+    "totalViews": "Total views",
+    "hourlyTrend": "Hourly trend",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "apply": "Apply",
+    "pickDates": "Pick a date range then click Apply",
     "noReferrers": "No external referrers yet",
     "noCountries": "No country data yet"
   },

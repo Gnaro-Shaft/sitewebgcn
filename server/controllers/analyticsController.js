@@ -68,19 +68,48 @@ exports.trackPageView = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-function periodToDate(period) {
+function parseRange(query = {}) {
   const now = new Date();
-  if (period === '30d') return new Date(now - 30 * 24 * 60 * 60 * 1000);
-  if (period === 'all') return new Date(0);
-  return new Date(now - 7 * 24 * 60 * 60 * 1000);
+  let since;
+  let until = now;
+
+  if (query.start && query.end) {
+    const s = new Date(query.start);
+    const e = new Date(query.end);
+    if (!isNaN(s) && !isNaN(e) && s <= e) {
+      since = s;
+      until = e;
+    }
+  }
+
+  if (!since) {
+    const period = query.period || '7d';
+    if (period === '24h') since = new Date(now - 24 * 60 * 60 * 1000);
+    else if (period === '30d') since = new Date(now - 30 * 24 * 60 * 60 * 1000);
+    else if (period === 'all') since = new Date(0);
+    else since = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  }
+
+  const spanMs = until - since;
+  const autoGranularity = spanMs <= 48 * 60 * 60 * 1000 ? 'hour' : 'day';
+  const granularity = query.granularity === 'hour' || query.granularity === 'day'
+    ? query.granularity
+    : autoGranularity;
+
+  return { since, until, granularity };
 }
+
+const BUCKET_FORMAT = {
+  hour: '%Y-%m-%dT%H:00',
+  day: '%Y-%m-%d',
+};
 
 // GET /api/analytics/summary — admin
 exports.getSummary = asyncHandler(async (req, res) => {
-  const period = req.query.period || '7d';
-  const since = periodToDate(period);
+  const { since, until, granularity } = parseRange(req.query);
+  const bucketFmt = BUCKET_FORMAT[granularity];
 
-  const baseMatch = { createdAt: { $gte: since } };
+  const baseMatch = { createdAt: { $gte: since, $lte: until } };
 
   const [totalViews, uniqueAgg, topPagesAgg, topReferrersAgg, deviceAgg, dailyAgg, countryAgg] =
     await Promise.all([
@@ -121,13 +150,13 @@ exports.getSummary = asyncHandler(async (req, res) => {
         { $match: baseMatch },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            _id: { $dateToString: { format: bucketFmt, date: '$createdAt' } },
             views: { $sum: 1 },
             sessions: { $addToSet: '$sessionId' },
           },
         },
-        { $project: { date: '$_id', views: 1, unique: { $size: '$sessions' }, _id: 0 } },
-        { $sort: { date: 1 } },
+        { $project: { bucket: '$_id', views: 1, unique: { $size: '$sessions' }, _id: 0 } },
+        { $sort: { bucket: 1 } },
       ]),
       PageView.aggregate([
         { $match: { ...baseMatch, country: { $ne: '' } } },
@@ -140,8 +169,9 @@ exports.getSummary = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      period,
       since,
+      until,
+      granularity,
       totalViews,
       uniqueVisitors: uniqueAgg[0]?.total || 0,
       topPages: topPagesAgg.map((p) => ({ path: p._id, views: p.views })),
@@ -153,13 +183,57 @@ exports.getSummary = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/analytics/articles — admin
-exports.getArticleStats = asyncHandler(async (req, res) => {
-  const period = req.query.period || '30d';
-  const since = periodToDate(period);
+// GET /api/analytics/timeseries — admin, one row per bucket with breakdown
+exports.getTimeseries = asyncHandler(async (req, res) => {
+  const { since, until, granularity } = parseRange(req.query);
+  const bucketFmt = BUCKET_FORMAT[granularity];
 
   const data = await PageView.aggregate([
-    { $match: { createdAt: { $gte: since }, articleSlug: { $ne: null } } },
+    { $match: { createdAt: { $gte: since, $lte: until } } },
+    {
+      $group: {
+        _id: {
+          bucket: { $dateToString: { format: bucketFmt, date: '$createdAt' } },
+          device: '$device',
+        },
+        views: { $sum: 1 },
+        sessions: { $addToSet: '$sessionId' },
+      },
+    },
+    {
+      $group: {
+        _id: '$_id.bucket',
+        views: { $sum: '$views' },
+        unique: { $sum: { $size: '$sessions' } },
+        devices: { $push: { device: '$_id.device', views: '$views' } },
+      },
+    },
+    { $project: { bucket: '$_id', views: 1, unique: 1, devices: 1, _id: 0 } },
+    { $sort: { bucket: 1 } },
+  ]);
+
+  const rows = data.map((row) => {
+    const byDevice = Object.fromEntries(row.devices.map((d) => [d.device, d.views]));
+    return {
+      bucket: row.bucket,
+      views: row.views,
+      unique: row.unique,
+      mobile: byDevice.mobile || 0,
+      tablet: byDevice.tablet || 0,
+      desktop: byDevice.desktop || 0,
+      bot: byDevice.bot || 0,
+    };
+  });
+
+  res.json({ success: true, data: { since, until, granularity, rows } });
+});
+
+// GET /api/analytics/articles — admin
+exports.getArticleStats = asyncHandler(async (req, res) => {
+  const { since, until } = parseRange({ ...req.query, period: req.query.period || '30d' });
+
+  const data = await PageView.aggregate([
+    { $match: { createdAt: { $gte: since, $lte: until }, articleSlug: { $ne: null } } },
     {
       $group: {
         _id: '$articleSlug',

@@ -151,6 +151,10 @@
   "analytics": {
     "title": "Analytics",
     "exportCsv": "Export CSV",
+    "exportAggregated": "Export agrégé",
+    "exportAggregatedHint": "Top pages, sources, pays — résumé",
+    "exportDetailed": "Export détaillé",
+    "exportDetailedHint": "Une ligne par jour ou par heure",
     "loadError": "Erreur de chargement des données",
     "pages": "Pages",
     "devices": "Appareils",
@@ -159,6 +163,12 @@
     "slug": "Slug",
     "views": "Vues",
     "unique": "Uniques",
+    "totalViews": "Vues totales",
+    "hourlyTrend": "Tendance horaire",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "apply": "Appliquer",
+    "pickDates": "Choisis une plage de dates puis clique sur Appliquer",
     "noReferrers": "Aucune source externe encore",
     "noCountries": "Pas encore de données pays"
   },
