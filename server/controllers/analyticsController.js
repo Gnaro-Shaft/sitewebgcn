@@ -1,8 +1,22 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 const PageView = require('../models/PageView');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const BOT_REGEX = /bot|crawl|spider|slurp|bing|duckduck|yandex|baidu|facebook|whatsapp|telegram|preview/i;
+
+async function isAdminRequest(req) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return false;
+  try {
+    const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('role');
+    return user?.role === 'admin';
+  } catch {
+    return false;
+  }
+}
 
 function parseUserAgent(ua = '') {
   if (!ua) return { device: 'unknown', browser: '' };
@@ -45,6 +59,10 @@ exports.trackPageView = asyncHandler(async (req, res) => {
 
   if (device === 'bot') {
     return res.json({ success: true, skipped: 'bot' });
+  }
+
+  if (await isAdminRequest(req)) {
+    return res.json({ success: true, skipped: 'admin' });
   }
 
   const ip = req.ip || req.connection?.remoteAddress || '';

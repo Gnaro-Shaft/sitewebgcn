@@ -169,6 +169,9 @@
     "endDate": "End date",
     "apply": "Apply",
     "pickDates": "Pick a date range then click Apply",
+    "excludeMe": "Exclude this browser",
+    "excluded": "Browser excluded",
+    "excludeHint": "Don't track my own visits from this browser",
     "noReferrers": "No external referrers yet",
     "noCountries": "No country data yet"
   },

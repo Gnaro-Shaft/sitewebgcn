@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
+import { isAdminBrowser, setAdminBrowser } from '../utils/analytics';
 
 const PERIODS = [
   { id: '24h', label: '24h' },
@@ -30,6 +31,13 @@ export default function AdminAnalytics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [exportMenu, setExportMenu] = useState(false);
+  const [excluded, setExcluded] = useState(isAdminBrowser());
+
+  const toggleExcluded = () => {
+    const next = !excluded;
+    setAdminBrowser(next);
+    setExcluded(next);
+  };
 
   const queryString = useMemo(() => {
     if (period === 'custom' && appliedRange) {
@@ -182,9 +190,23 @@ export default function AdminAnalytics() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-dark-text mb-6">
-          {t('analytics.title')}
-        </h1>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-dark-text">
+            {t('analytics.title')}
+          </h1>
+          <button
+            onClick={toggleExcluded}
+            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              excluded
+                ? 'bg-accent/10 border-accent text-accent'
+                : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-dark-muted hover:border-accent hover:text-accent'
+            }`}
+            title={t('analytics.excludeHint')}
+          >
+            <span className={`w-2 h-2 rounded-full ${excluded ? 'bg-accent' : 'bg-gray-300 dark:bg-dark-muted'}`} />
+            {excluded ? t('analytics.excluded') : t('analytics.excludeMe')}
+          </button>
+        </div>
 
         {period === 'custom' && (
           <div className="mb-6 p-4 bg-white dark:bg-dark-bg2 rounded-xl border border-gray-200 dark:border-dark-border flex flex-wrap items-end gap-3">

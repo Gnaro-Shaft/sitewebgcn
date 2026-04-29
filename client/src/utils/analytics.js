@@ -3,15 +3,32 @@ import { useLocation } from 'react-router';
 import api from '../api/axios';
 
 const SESSION_KEY = 'gcn_analytics_session';
+const ADMIN_FLAG_KEY = 'gcn_admin';
 const ADMIN_PATHS = ['/dashboard', '/admin', '/login'];
 
 function isAdminPath(path) {
   return ADMIN_PATHS.some((p) => path.startsWith(p));
 }
 
+export function isAdminBrowser() {
+  try {
+    return localStorage.getItem(ADMIN_FLAG_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setAdminBrowser(on) {
+  try {
+    if (on) localStorage.setItem(ADMIN_FLAG_KEY, '1');
+    else localStorage.removeItem(ADMIN_FLAG_KEY);
+  } catch {}
+}
+
 function shouldTrack() {
   if (typeof window === 'undefined') return false;
   if (navigator.doNotTrack === '1' || window.doNotTrack === '1') return false;
+  if (isAdminBrowser()) return false;
   return true;
 }
 
