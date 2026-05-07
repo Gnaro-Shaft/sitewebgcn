@@ -8,6 +8,7 @@ const SITE_URL = process.env.SITE_URL || 'https://gcn-data.fr';
 const STATIC_PAGES = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
   { path: '/projects', priority: '0.9', changefreq: 'weekly' },
+  { path: '/stack', priority: '0.8', changefreq: 'monthly' },
   { path: '/blog', priority: '0.9', changefreq: 'daily' },
 ];
 

@@ -20,6 +20,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDrafts = lazy(() => import('./pages/AdminDrafts'));
 const AdminProjects = lazy(() => import('./pages/AdminProjects'));
 const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+const StackPage = lazy(() => import('./pages/StackPage'));
 
 function AnalyticsTracker() {
   usePageTracking();
@@ -84,6 +85,7 @@ export default function App() {
 
               {/* Public pages with shared layout */}
               <Route path="/projects" element={<PublicLayout><ProjectsPage /></PublicLayout>} />
+              <Route path="/stack" element={<PublicLayout><StackPage /></PublicLayout>} />
               <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
               <Route path="/blog/:slug" element={<PublicLayout><ArticlePage /></PublicLayout>} />
               <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />

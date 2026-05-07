@@ -3,10 +3,111 @@
     "home": "Home",
     "projects": "Projects",
     "blog": "Blog",
+    "stack": "Stack",
     "about": "About",
     "skills": "Skills",
     "contact": "Contact",
     "dashboard": "Dashboard"
+  },
+  "stack": {
+    "title": "Architecture & Stack",
+    "tagline": "How this site is built, why these technical choices, and what I learned along the way.",
+    "diagramTitle": "Overview",
+    "diagramHint": "Hover the boxes for component details.",
+    "layersTitle": "The 4 layers",
+    "decisionsTitle": "Technical decisions",
+    "decisionsSubtitle": "For each architectural choice: context, reasoning, and accepted trade-offs.",
+    "lessonsTitle": "What I learned",
+    "stats": {
+      "linesOfCode": "Lines of code",
+      "npmDeps": "npm deps",
+      "endpoints": "REST endpoints",
+      "widgets": "Dashboard widgets",
+      "buildTime": "Built in",
+      "deploy": "Auto-deploy"
+    },
+    "layers": {
+      "frontend": {
+        "title": "Frontend — React SPA",
+        "desc": "React 19 + Vite app with animations, dark/light mode, full-screen snap scroll on home, FR/EN i18n, dynamic Open Graph SEO."
+      },
+      "backend": {
+        "title": "Backend — REST API MVC",
+        "desc": "Node 20 + Express 5 in MVC architecture. JWT auth, rate limiting, input validation, strict CORS, asyncHandler everywhere, Helmet + CSP."
+      },
+      "external": {
+        "title": "External services",
+        "desc": "Anthropic Claude to generate articles. GitHub API for heatmap and dynamic skills. Hyperliquid for live trading positions. Make.com to publish on LinkedIn."
+      },
+      "infra": {
+        "title": "Infrastructure & Deploy",
+        "desc": "Hosted on Fly.io Paris region. Multi-stage Docker, non-root user. MongoDB Atlas (2 clusters). GitHub Actions CI/CD auto-deploy on every main push."
+      }
+    },
+    "diagram": {
+      "visitor": "Visitor",
+      "visitorTip": "A recruiter, a client, or yourself landing on gcn-data.fr.",
+      "flyTip": "Single Docker container on Fly.io serving both the built frontend AND the Express backend. Multi-stage build: 1 image, 2 roles.",
+      "frontendTip": "React 19 + Vite + Tailwind v4. SPA with client routing, FR/EN i18n, dynamic SEO via react-helmet-async.",
+      "backendTip": "Express 5 in MVC. JWT auth, rate limiting (10 logins/15min), validation, strict CORS, Helmet + CSP, SIGTERM graceful shutdown.",
+      "mongoTip": "2 Atlas clusters: main (users, articles, projects, page views, AI usage) + bot (trades, signals, OHLC from Hyperliquid V8 bot).",
+      "claudeTip": "Claude Sonnet 4.5 via official SDK. Hard-limit budget guard ($4.17/mo, $50/yr). Article generation from project context + GitHub activity.",
+      "githubTip": "GitHub API for: contribution heatmap, dynamic skills (languages + dependencies), semi-auto project import to DB.",
+      "hyperTip": "Hyperliquid DEX API for fetching open positions and live PnL on the dashboard's Trades widget.",
+      "makeTip": "Generic webhook → Make.com → LinkedIn. Chosen to avoid the direct LinkedIn API (mandatory weeks-long review). n8n self-host migration planned.",
+      "linkedinTip": "Auto-publish on every published article. Post includes title, excerpt, link and tags. Anti-duplicate handled by LinkedIn itself.",
+      "hoverHint": "↑ Hover the boxes for component details"
+    },
+    "decisions": {
+      "reasoning": "Why this choice",
+      "tradeoffLabel": "Accepted trade-off",
+      "mongo": {
+        "title": "MongoDB rather than PostgreSQL",
+        "choice": "MongoDB Atlas",
+        "reasoning": "Flexible schemas: project highlights are arrays of strings, articles have free-form markdown, AIUsage tracks an evolving format. No SQL migration on every field add.\n\nA personal portfolio's traffic doesn't justify a relational database's rigor.",
+        "tradeoff": "No real joins — I use denormalization (e.g. articles.author is just an ObjectId, I populate on demand). Acceptable at my scale."
+      },
+      "flyio": {
+        "title": "Fly.io rather than Vercel or Render",
+        "choice": "Fly.io Paris region",
+        "reasoning": "One deployment unit (frontend + backend in same container) instead of splitting front on Vercel and API on Render. fly.toml versioned.\n\nLow latency for European visitors (cdg region). Auto-stop saves resources when site is idle.",
+        "tradeoff": "2-5s cold start after inactivity. Acceptable for a portfolio (a recruiter will wait). If traffic grows, I'll set min_machines_running=1."
+      },
+      "webhook": {
+        "title": "Make.com rather than direct LinkedIn API",
+        "choice": "Webhook → Make.com → LinkedIn",
+        "reasoning": "The official LinkedIn API requires an app review (2-8 weeks, often rejected for personal portfolios) and no longer supports posting from a personal profile without a Company Page.\n\nMake.com handles the LinkedIn OAuth on its side. 5-minute setup, free up to 1000 ops/month.",
+        "tradeoff": "Third-party service dependency. Mitigated by a generic payload: migrating to self-hosted n8n = just change one env var, zero refactor."
+      },
+      "analytics": {
+        "title": "Custom analytics rather than Plausible/Umami",
+        "choice": "Build it yourself in the dashboard",
+        "reasoning": "Consistent with the 'everything in my cockpit' philosophy. No external dependency, free forever, and a great exercise to understand how production tracking actually works.\n\nUseful portfolio metrics (views, countries, sources, top articles) are also the simplest to implement — ~90% of a pro tool's value for 4-6h of code.",
+        "tradeoff": "No click heatmap, no session replay, no A/B testing. Not relevant for a portfolio. If needed someday: add Microsoft Clarity in 1 line."
+      },
+      "webhookGeneric": {
+        "title": "Generic webhook vs LinkedIn SDK",
+        "choice": "Neutral, agnostic payload format",
+        "reasoning": "The SocialPublisher service sends a `{ platform, text, article: {...} }` JSON to a webhook. Zero coupling with Make, X, or LinkedIn in the code.\n\nTomorrow, when I have my own server, I migrate to self-hosted n8n by just changing the LINKEDIN_WEBHOOK_URL env var.",
+        "tradeoff": "More logic in Make.com (final formatting per platform) than in code. Acceptable since Make is versionable."
+      },
+      "snapscroll": {
+        "title": "Full-screen snap scroll on home",
+        "choice": "1 section = 1 viewport, snapping scroll",
+        "reasoning": "Immediately differentiates the site from a classic portfolio. Forces designing each section as a complete visual unit.\n\nMatrix identity + accent glow = a visitor knows in 2 seconds it's a dev who loves what they do.",
+        "tradeoff": "Less content visible at once vs a classic long scroll. Mitigated by limiting home to essentials (Hero, About, Skills, 6 projects, Contact) and putting details on /projects and /blog pages."
+      }
+    },
+    "lessons": {
+      "label": "Lesson",
+      "1": "Code is only 30% of the job. Every feature confronted me with problems that only appear on a production site: DNS, CORS behind proxy, LinkedIn anti-spam, Google cache, dotenv overridden by another app... That's what made me progress fastest.",
+      "2": "The 'graceful degradation' pattern saves lives. External services (Anthropic, GitHub, Make.com) can fail. Every call has a fallback, every webhook a graceful skip if not configured. The site stays functional even when the ecosystem wobbles.",
+      "3": "Building your own tracking is underrated. I have everything in my dashboard: analytics, AI budget, GitHub stats, live trading, articles. A single cockpit, not 5 open tabs. This unification is what makes the project alive in my eyes.",
+      "4": "What isn't measured doesn't exist. Before analytics, I had no idea if anyone visited the site. Before the AI budget guard, I had no idea how many tokens I was consuming. Data transforms intuition into decisions."
+    },
+    "footer": {
+      "builtWith": "Site built with care. Source code is open."
+    }
   },
   "hero": {
     "title": "Genaro-Cedric",

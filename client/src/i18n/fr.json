@@ -3,10 +3,111 @@
     "home": "Accueil",
     "projects": "Projets",
     "blog": "Blog",
+    "stack": "Stack",
     "about": "À propos",
     "skills": "Compétences",
     "contact": "Contact",
     "dashboard": "Dashboard"
+  },
+  "stack": {
+    "title": "Architecture & Stack",
+    "tagline": "Comment ce site est construit, pourquoi ces choix techniques, et ce que j'ai appris en chemin.",
+    "diagramTitle": "Vue d'ensemble",
+    "diagramHint": "Survole les blocs pour voir le détail de chaque composant.",
+    "layersTitle": "Les 4 couches",
+    "decisionsTitle": "Décisions techniques",
+    "decisionsSubtitle": "Pour chaque choix d'architecture, le contexte, le raisonnement et les compromis assumés.",
+    "lessonsTitle": "Ce que j'ai appris",
+    "stats": {
+      "linesOfCode": "Lignes de code",
+      "npmDeps": "Dépendances npm",
+      "endpoints": "Endpoints REST",
+      "widgets": "Widgets dashboard",
+      "buildTime": "Construit en",
+      "deploy": "Deploy auto"
+    },
+    "layers": {
+      "frontend": {
+        "title": "Frontend — SPA React",
+        "desc": "Application React 19 + Vite, animations, mode sombre/clair, scroll snap full-screen sur la home, internationalisation FR/EN, SEO avec Open Graph dynamique."
+      },
+      "backend": {
+        "title": "Backend — API REST MVC",
+        "desc": "Node 20 + Express 5 en architecture MVC. Authentification JWT, rate limiting, validation d'entrée, CORS strict, asyncHandler partout, Helmet + CSP."
+      },
+      "external": {
+        "title": "Services externes",
+        "desc": "Anthropic Claude pour générer les articles. GitHub API pour la heatmap et les skills dynamiques. Hyperliquid pour les positions de trading live. Make.com pour publier sur LinkedIn."
+      },
+      "infra": {
+        "title": "Infrastructure & Deploy",
+        "desc": "Hébergé sur Fly.io en région Paris. Docker multi-stage, utilisateur non-root. MongoDB Atlas (2 clusters). CI/CD GitHub Actions auto-deploy à chaque push sur main."
+      }
+    },
+    "diagram": {
+      "visitor": "Visiteur",
+      "visitorTip": "Un recruteur, un client, ou toi-même qui débarque sur gcn-data.fr.",
+      "flyTip": "Un seul container Docker sur Fly.io qui sert le frontend buildé ET le backend Express. Multi-stage build : 1 image, 2 rôles.",
+      "frontendTip": "React 19 + Vite + Tailwind v4. SPA avec routing client, i18n FR/EN, SEO dynamique via react-helmet-async.",
+      "backendTip": "Express 5 en MVC. JWT auth, rate limiting (10 logins/15min), validation, CORS restrictif, Helmet + CSP, graceful shutdown SIGTERM.",
+      "mongoTip": "2 clusters Atlas : principal (users, articles, projets, page views, AI usage) + bot (trades, signaux, OHLC du bot Hyperliquid V8).",
+      "claudeTip": "Claude Sonnet 4.5 via SDK officiel. Budget guard hard limit (4.17$/mois, 50$/an). Génération d'articles à partir du contexte projets + activité GitHub.",
+      "githubTip": "GitHub API pour : heatmap de contributions, skills dynamiques (langages + dépendances), import semi-auto des projets dans la DB.",
+      "hyperTip": "Hyperliquid DEX API pour récupérer les positions ouvertes et le PnL en temps réel sur le widget Trades du dashboard.",
+      "makeTip": "Webhook générique → Make.com → LinkedIn. Choisi pour éviter l'API LinkedIn directe (review obligatoire de plusieurs semaines). Migration n8n self-hosted prévue plus tard.",
+      "linkedinTip": "Auto-publish à chaque article publié. Le post inclut titre, excerpt, lien et tags. Anti-duplicate géré par LinkedIn lui-même.",
+      "hoverHint": "↑ Survole les blocs pour voir le détail de chaque composant"
+    },
+    "decisions": {
+      "reasoning": "Pourquoi ce choix",
+      "tradeoffLabel": "Compromis assumé",
+      "mongo": {
+        "title": "MongoDB plutôt que PostgreSQL",
+        "choice": "MongoDB Atlas",
+        "reasoning": "Schémas flexibles : les highlights des projets sont des arrays de strings, les articles ont du markdown libre, l'AIUsage tracke un format évolutif. Pas de migrations SQL à chaque ajout de champ.\n\nLe trafic d'un portfolio personnel ne justifie pas la rigueur d'une base relationnelle.",
+        "tradeoff": "Pas de jointures vraies — j'utilise du dénormalization (ex: articles.author est juste un ObjectId, je peuple à la demande). Acceptable à mon échelle."
+      },
+      "flyio": {
+        "title": "Fly.io plutôt que Vercel ou Render",
+        "choice": "Fly.io en région Paris",
+        "reasoning": "Une seule unité de déploiement (frontend + backend dans un même container) au lieu de splitter front sur Vercel et API sur Render. Configuration via fly.toml versionnée.\n\nLatence basse pour les visiteurs européens (région cdg). Auto-stop pour économiser les ressources quand le site est inactif.",
+        "tradeoff": "Cold start de 2-5s après inactivité. Acceptable pour un portfolio (un recruteur attendra). Si traffic croît, je passerai à min_machines_running=1."
+      },
+      "webhook": {
+        "title": "Make.com plutôt que l'API LinkedIn directe",
+        "choice": "Webhook → Make.com → LinkedIn",
+        "reasoning": "L'API LinkedIn officielle exige une app review (2-8 semaines, souvent refusée pour les portfolios perso) et ne supporte plus le posting depuis un profil personnel sans Page Company.\n\nMake.com gère l'OAuth LinkedIn de son côté. Setup en 5 minutes, gratuit jusqu'à 1000 ops/mois.",
+        "tradeoff": "Dépendance à un service tiers. Mitigé par un payload générique : migrer vers n8n self-hosted = juste changer une env var, zéro refactor."
+      },
+      "analytics": {
+        "title": "Analytics maison plutôt que Plausible/Umami",
+        "choice": "Build it yourself dans le dashboard",
+        "reasoning": "Cohérent avec la philosophie « tout dans mon cockpit ». Aucune dépendance externe, gratuit à vie, et c'est un exercice formateur pour comprendre vraiment comment fonctionne du tracking de production.\n\nLes métriques utiles pour un portfolio (vues, pays, sources, articles top) sont les plus simples à implémenter — ~90% de la valeur d'un outil pro pour 4-6h de code.",
+        "tradeoff": "Pas de heatmap clic, pas de session replay, pas d'A/B testing. Pas pertinent pour un portfolio. Si besoin un jour : ajouter Microsoft Clarity en 1 ligne."
+      },
+      "webhookGeneric": {
+        "title": "Webhook générique vs SDK LinkedIn",
+        "choice": "Format payload neutre, agnostique",
+        "reasoning": "Le service SocialPublisher envoie un JSON `{ platform, text, article: {...} }` à un webhook. Aucun couplage avec Make, X, ou LinkedIn dans le code.\n\nDemain quand j'aurai mon serveur, je migre vers n8n self-hosted en changeant juste l'env var LINKEDIN_WEBHOOK_URL.",
+        "tradeoff": "Plus de logique dans Make.com (formattage final pour chaque plateforme) que dans le code. Acceptable car Make est versionnable."
+      },
+      "snapscroll": {
+        "title": "Scroll snap full-screen sur la home",
+        "choice": "1 section = 1 écran, scroll qui accroche",
+        "reasoning": "Différencie immédiatement le site d'un portfolio classique. Force à concevoir chaque section comme une unité visuelle complète.\n\nIdentité Matrix + glow accent = un visiteur sait en 2 secondes que c'est un dev qui aime ce qu'il fait.",
+        "tradeoff": "Moins de contenu visible d'un coup vs un long scroll classique. Mitigé en limitant la home aux essentiels (Hero, About, Skills, 6 projets, Contact) et en mettant le détail sur les pages /projects et /blog."
+      }
+    },
+    "lessons": {
+      "label": "Leçon",
+      "1": "Le code n'est que 30% du job. Chaque feature m'a confronté à un problème qui n'apparaît que sur un site en production : DNS, CORS sous proxy, anti-spam LinkedIn, cache Google, dotenv qui se fait override par une autre app... C'est ça qui m'a fait progresser le plus vite.",
+      "2": "Le pattern « degradation gracieuse » sauve la vie. Les services externes (Anthropic, GitHub, Make.com) peuvent tomber. Chaque appel a un fallback, chaque webhook un graceful skip si non configuré. Le site reste fonctionnel même quand l'écosystème vacille.",
+      "3": "Construire son propre tracking est sous-estimé. J'ai tout dans mon dashboard : analytics, budget IA, GitHub stats, trading live, articles. Un seul cockpit, pas 5 onglets ouverts. Cette unification est ce qui rend le projet vivant à mes yeux.",
+      "4": "Ce qui n'est pas mesuré n'existe pas. Avant les analytics, je ne savais pas si quelqu'un visitait mon site. Avant le budget guard sur l'IA, je ne savais pas combien de tokens je consommais. La donnée transforme l'intuition en décision."
+    },
+    "footer": {
+      "builtWith": "Site construit avec attention. Code source ouvert."
+    }
   },
   "hero": {
     "title": "Genaro-Cedric",

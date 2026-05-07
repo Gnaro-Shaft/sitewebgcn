@@ -13,6 +13,7 @@ export default function Navbar() {
   const navLinks = [
     { to: '/', label: t('nav.home') },
     { to: '/projects', label: t('nav.projects') },
+    { to: '/stack', label: t('nav.stack') },
     { to: '/blog', label: t('nav.blog') },
   ];
 
@@ -21,6 +22,7 @@ export default function Navbar() {
     { id: 'skills', label: t('nav.skills') },
     { id: 'projects', label: t('nav.projects') },
     { id: 'contact', label: t('nav.contact') },
+    { to: '/stack', label: t('nav.stack') },
     { to: '/blog', label: t('nav.blog') },
     { to: '/dashboard', label: t('nav.dashboard') },
   ];
