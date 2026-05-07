@@ -5,12 +5,26 @@ import api from '../api/axios';
 import { isAdminBrowser, setAdminBrowser } from '../utils/analytics';
 
 const PERIODS = [
-  { id: '24h', label: '24h' },
+  { id: 'today', label: 'Today' },
   { id: '7d', label: '7d' },
   { id: '30d', label: '30d' },
+  { id: 'month', label: 'Month' },
+  { id: 'year', label: 'Year' },
   { id: 'all', label: 'All' },
   { id: 'custom', label: 'Custom' },
 ];
+
+// Labels for the comparison tooltip per period
+const COMPARE_LABELS = {
+  today: 'vs hier',
+  '7d': 'vs 7 jours precedents',
+  '30d': 'vs 30 jours precedents',
+  month: 'vs mois precedent',
+  year: 'vs annee precedente',
+  '24h': 'vs 24h precedentes',
+  custom: 'vs periode precedente',
+  all: null,
+};
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -40,12 +54,13 @@ export default function AdminAnalytics() {
   };
 
   const queryString = useMemo(() => {
+    const compare = period !== 'all' ? '&compare=true' : '';
     if (period === 'custom' && appliedRange) {
       const start = new Date(appliedRange.start).toISOString();
       const end = new Date(appliedRange.end + 'T23:59:59').toISOString();
-      return `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+      return `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}${compare}`;
     }
-    return `period=${period}`;
+    return `period=${period}${compare}`;
   }, [period, appliedRange]);
 
   const fetchData = useCallback(() => {
@@ -260,11 +275,27 @@ export default function AdminAnalytics() {
         {data && !loading && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <KPI label={t('analytics.totalViews')} value={data.totalViews} accent />
-              <KPI label={t('widgets.uniqueVisitors')} value={data.uniqueVisitors} />
+              <KPI
+                label={t('analytics.totalViews')}
+                value={data.totalViews}
+                delta={data.comparison?.delta?.totalViews}
+                deltaLabel={COMPARE_LABELS[period]}
+                previousValue={data.comparison?.previous?.totalViews}
+                accent
+              />
+              <KPI
+                label={t('widgets.uniqueVisitors')}
+                value={data.uniqueVisitors}
+                delta={data.comparison?.delta?.uniqueVisitors}
+                deltaLabel={COMPARE_LABELS[period]}
+                previousValue={data.comparison?.previous?.uniqueVisitors}
+              />
               <KPI
                 label={t('widgets.mobile')}
                 value={`${pct(data.deviceSplit.find((d) => d.device === 'mobile')?.views || 0, data.totalViews)}%`}
+                delta={data.comparison?.delta?.mobileViews}
+                deltaLabel={COMPARE_LABELS[period]}
+                previousValue={data.comparison?.previous?.mobileViews}
               />
               <KPI label={t('analytics.pages')} value={data.topPages.length} />
             </div>
@@ -329,14 +360,59 @@ function pct(part, total) {
   return total ? Math.round((part / total) * 100) : 0;
 }
 
-function KPI({ label, value, accent }) {
+function KPI({ label, value, accent, delta, deltaLabel, previousValue }) {
+  const showDelta = delta !== undefined && delta !== null && deltaLabel;
+  const isNew = delta === null && previousValue === 0;
   return (
     <div className="bg-white dark:bg-dark-bg2 rounded-xl border border-gray-200 dark:border-dark-border p-5">
       <div className={`text-3xl font-bold ${accent ? 'text-accent' : 'text-gray-900 dark:text-dark-text'}`}>
         {value}
       </div>
       <div className="text-xs text-gray-500 dark:text-dark-muted mt-1 uppercase tracking-wider">{label}</div>
+      {(showDelta || isNew) && (
+        <div className="mt-2">
+          <Delta value={delta} previousValue={previousValue} label={deltaLabel} />
+        </div>
+      )}
     </div>
+  );
+}
+
+function Delta({ value, previousValue, label }) {
+  // value is null = "new" (no previous data)
+  if (value === null) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-xs font-medium text-accent"
+        title={label}
+      >
+        <span>NEW</span>
+      </span>
+    );
+  }
+  if (value === 0) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-dark-muted"
+        title={`${label} : ${previousValue ?? 0}`}
+      >
+        <span>= 0%</span>
+      </span>
+    );
+  }
+  const positive = value > 0;
+  const color = positive
+    ? 'text-green-600 dark:text-accent'
+    : 'text-red-600 dark:text-red-400';
+  const arrow = positive ? '▲' : '▼';
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-xs font-medium ${color}`}
+      title={`${label} : ${previousValue ?? 0}`}
+    >
+      <span>{arrow}</span>
+      <span>{positive ? '+' : ''}{value}%</span>
+    </span>
   );
 }
 

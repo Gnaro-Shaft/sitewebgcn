@@ -43,7 +43,7 @@ const pageViewSchema = new mongoose.Schema(
     createdAt: {
       type: Date,
       default: Date.now,
-      expires: 60 * 60 * 24 * 90,
+      expires: 60 * 60 * 24 * 365, // 1 year — supports yearly views
     },
   },
   { timestamps: { createdAt: false, updatedAt: false } }

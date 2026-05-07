@@ -86,10 +86,80 @@ exports.trackPageView = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
+function startOfDay(d) {
+  const x = new Date(d);
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+
+function startOfMonth(d) {
+  const x = new Date(d);
+  x.setUTCDate(1);
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+
+function startOfYear(d) {
+  const x = new Date(d);
+  x.setUTCMonth(0, 1);
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+
+// Compute current and previous range for a given period preset.
+// `previous` is the equivalent range immediately before — used for delta.
+function rangeForPeriod(period, now = new Date()) {
+  switch (period) {
+    case 'today': {
+      const since = startOfDay(now);
+      const prevUntil = since;
+      const prevSince = new Date(prevUntil.getTime() - 24 * 60 * 60 * 1000);
+      return { since, until: now, prevSince, prevUntil };
+    }
+    case '7d': {
+      const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const prevSince = new Date(since.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return { since, until: now, prevSince, prevUntil: since };
+    }
+    case '30d': {
+      const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const prevSince = new Date(since.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return { since, until: now, prevSince, prevUntil: since };
+    }
+    case 'month': {
+      const since = startOfMonth(now);
+      const prevSince = startOfMonth(new Date(since.getTime() - 1));
+      return { since, until: now, prevSince, prevUntil: since };
+    }
+    case 'year': {
+      const since = startOfYear(now);
+      const prevSince = startOfYear(new Date(since.getTime() - 1));
+      return { since, until: now, prevSince, prevUntil: since };
+    }
+    case 'all': {
+      return { since: new Date(0), until: now, prevSince: null, prevUntil: null };
+    }
+    case '24h':
+    default: {
+      const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const prevSince = new Date(since.getTime() - 24 * 60 * 60 * 1000);
+      return { since, until: now, prevSince, prevUntil: since };
+    }
+  }
+}
+
+function autoGranularity(spanMs) {
+  if (spanMs <= 48 * 60 * 60 * 1000) return 'hour';
+  if (spanMs <= 90 * 24 * 60 * 60 * 1000) return 'day';
+  return 'month';
+}
+
 function parseRange(query = {}) {
   const now = new Date();
   let since;
   let until = now;
+  let prevSince = null;
+  let prevUntil = null;
 
   if (query.start && query.end) {
     const s = new Date(query.start);
@@ -97,35 +167,67 @@ function parseRange(query = {}) {
     if (!isNaN(s) && !isNaN(e) && s <= e) {
       since = s;
       until = e;
+      // Previous = same span immediately before
+      const span = until - since;
+      prevUntil = since;
+      prevSince = new Date(since.getTime() - span);
     }
   }
 
   if (!since) {
     const period = query.period || '7d';
-    if (period === '24h') since = new Date(now - 24 * 60 * 60 * 1000);
-    else if (period === '30d') since = new Date(now - 30 * 24 * 60 * 60 * 1000);
-    else if (period === 'all') since = new Date(0);
-    else since = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    const r = rangeForPeriod(period, now);
+    since = r.since;
+    until = r.until;
+    prevSince = r.prevSince;
+    prevUntil = r.prevUntil;
   }
 
   const spanMs = until - since;
-  const autoGranularity = spanMs <= 48 * 60 * 60 * 1000 ? 'hour' : 'day';
-  const granularity = query.granularity === 'hour' || query.granularity === 'day'
+  const valid = ['hour', 'day', 'month'];
+  const granularity = valid.includes(query.granularity)
     ? query.granularity
-    : autoGranularity;
+    : autoGranularity(spanMs);
 
-  return { since, until, granularity };
+  return { since, until, granularity, prevSince, prevUntil };
 }
 
 const BUCKET_FORMAT = {
   hour: '%Y-%m-%dT%H:00',
   day: '%Y-%m-%d',
+  month: '%Y-%m',
 };
+
+// Compute totals for a given range (used for both current + previous periods)
+async function computeTotals(since, until) {
+  const match = { createdAt: { $gte: since, $lte: until } };
+  const [totalViews, uniqueAgg, mobileAgg] = await Promise.all([
+    PageView.countDocuments(match),
+    PageView.aggregate([
+      { $match: match },
+      { $group: { _id: '$sessionId' } },
+      { $count: 'total' },
+    ]),
+    PageView.countDocuments({ ...match, device: 'mobile' }),
+  ]);
+  return {
+    totalViews,
+    uniqueVisitors: uniqueAgg[0]?.total || 0,
+    mobileViews: mobileAgg,
+  };
+}
+
+// Compute delta % between current and previous (rounded, capped, null-safe)
+function computeDelta(current, previous) {
+  if (previous === 0) return current === 0 ? 0 : null; // null = "new" (avoid +Infinity)
+  return Math.round(((current - previous) / previous) * 1000) / 10; // 1 decimal
+}
 
 // GET /api/analytics/summary — admin
 exports.getSummary = asyncHandler(async (req, res) => {
-  const { since, until, granularity } = parseRange(req.query);
+  const { since, until, granularity, prevSince, prevUntil } = parseRange(req.query);
   const bucketFmt = BUCKET_FORMAT[granularity];
+  const compare = req.query.compare !== 'false' && prevSince && prevUntil;
 
   const baseMatch = { createdAt: { $gte: since, $lte: until } };
 
@@ -184,6 +286,28 @@ exports.getSummary = asyncHandler(async (req, res) => {
       ]),
     ]);
 
+  const uniqueVisitors = uniqueAgg[0]?.total || 0;
+  const mobileViews = deviceAgg.find((d) => d._id === 'mobile')?.views || 0;
+
+  let comparison = null;
+  if (compare) {
+    const prev = await computeTotals(prevSince, prevUntil);
+    comparison = {
+      previous: {
+        since: prevSince,
+        until: prevUntil,
+        totalViews: prev.totalViews,
+        uniqueVisitors: prev.uniqueVisitors,
+        mobileViews: prev.mobileViews,
+      },
+      delta: {
+        totalViews: computeDelta(totalViews, prev.totalViews),
+        uniqueVisitors: computeDelta(uniqueVisitors, prev.uniqueVisitors),
+        mobileViews: computeDelta(mobileViews, prev.mobileViews),
+      },
+    };
+  }
+
   res.json({
     success: true,
     data: {
@@ -191,12 +315,13 @@ exports.getSummary = asyncHandler(async (req, res) => {
       until,
       granularity,
       totalViews,
-      uniqueVisitors: uniqueAgg[0]?.total || 0,
+      uniqueVisitors,
       topPages: topPagesAgg.map((p) => ({ path: p._id, views: p.views })),
       topReferrers: topReferrersAgg.map((r) => ({ source: r._id, views: r.views })),
       deviceSplit: deviceAgg.map((d) => ({ device: d._id, views: d.views })),
       countries: countryAgg.map((c) => ({ country: c._id, views: c.views })),
       daily: dailyAgg,
+      comparison,
     },
   });
 });

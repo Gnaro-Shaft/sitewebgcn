@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\('./server/controllers/rssController'\\); console.log\\('OK'\\)\")",
+      "Bash(curl -sS http://localhost:5001/rss.xml)"
+    ]
+  }
+}
