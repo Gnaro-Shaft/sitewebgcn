@@ -53,17 +53,25 @@ async function sendContactEmail({ name, email, subject, message }) {
   const safeSubject = escapeHtml(subject);
   const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
 
+  // From: must be the authenticated SMTP account (Gmail rejects spoofing).
+  // We put the visitor's email in Reply-To so "Reply" goes back to them.
+  const fromName = process.env.SMTP_FROM_NAME || 'Portfolio Contact';
+  const fromAddress = process.env.SMTP_USER || process.env.CONTACT_EMAIL || 'no-reply@gcn-data.fr';
+
   const info = await transport.sendMail({
-    from: `"${safeName}" <${safeEmail}>`,
-    to: process.env.CONTACT_EMAIL || 'admin@gcn.dev',
-    subject: `[Contact] ${safeSubject || 'Message from portfolio'}`,
-    text: `From: ${name} (${email})\n\n${message}`,
+    from: `"${fromName}" <${fromAddress}>`,
+    to: process.env.CONTACT_EMAIL || fromAddress,
+    replyTo: `"${safeName}" <${email}>`,
+    subject: `[Contact] ${safeSubject || `Message de ${name}`}`,
+    text: `De : ${name} (${email})\n\n${message}\n\n---\nRepondre a : ${email}`,
     html: `
-      <h3>New contact message</h3>
-      <p><strong>From:</strong> ${safeName} (${safeEmail})</p>
-      <p><strong>Subject:</strong> ${safeSubject || 'N/A'}</p>
+      <h3>Nouveau message du formulaire de contact</h3>
+      <p><strong>De :</strong> ${safeName} &lt;${safeEmail}&gt;</p>
+      <p><strong>Sujet :</strong> ${safeSubject || 'N/A'}</p>
       <hr>
       <p>${safeMessage}</p>
+      <hr>
+      <p style="color:#888;font-size:12px;">Repondez directement a cet email — la reponse partira vers ${safeEmail}.</p>
     `,
   });
 
