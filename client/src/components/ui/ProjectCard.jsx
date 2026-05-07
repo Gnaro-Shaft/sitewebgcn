@@ -9,6 +9,10 @@ export default function ProjectCard({ project }) {
         <img
           src={project.imageUrl}
           alt={project.title}
+          width="600"
+          height="160"
+          loading="lazy"
+          decoding="async"
           className="w-full h-40 object-cover"
         />
       ) : (

@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const { connectBotDB } = require('./config/botDb');
@@ -17,6 +18,9 @@ const app = express();
 
 // Trust Fly.io proxy (for correct X-Forwarded-For handling)
 app.set('trust proxy', 1);
+
+// Compression (gzip / deflate / brotli) — drastically reduces JS/CSS/HTML transfer size
+app.use(compression({ level: 6, threshold: 1024 }));
 
 // Middleware — Security
 app.use(
@@ -118,11 +122,34 @@ app.use('/api/analytics', require('./routes/analytics'));
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
+  const distPath = path.join(__dirname, '../client/dist');
+
+  // Hashed assets (Vite adds content-hash) — immutable, cache 1 year
+  app.use('/assets', express.static(path.join(distPath, 'assets'), {
+    maxAge: '1y',
+    immutable: true,
+  }));
+
+  // Static images — cache 30 days (long but mutable)
+  app.use('/images', express.static(path.join(distPath, 'images'), {
+    maxAge: '30d',
+  }));
+
+  // Other static files (favicon, og-image, robots, etc.) — cache 1 day
+  app.use(express.static(distPath, {
+    maxAge: '1d',
+    setHeaders: (res, filePath) => {
+      // index.html itself must NOT be cached aggressively (it points to current asset hashes)
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      }
+    },
+  }));
 
   // All non-API routes → React app (SPA fallback)
   app.get(/^(?!\/api).*/, (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+    res.set('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 

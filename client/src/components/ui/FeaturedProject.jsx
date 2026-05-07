@@ -31,6 +31,10 @@ export default function FeaturedProject({ project }) {
             <img
               src={project.imageUrl}
               alt={project.title}
+              width="1280"
+              height="720"
+              fetchpriority="high"
+              decoding="async"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
