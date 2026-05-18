@@ -259,12 +259,14 @@ async function publishVideo({ accessToken, videoBuffer, title, privacyLevel }) {
     body: JSON.stringify(initBody),
   });
   const initData = await initResp.json();
+  // Succès = error.code === 'ok'. Sinon on remonte le body complet pour diagnostic.
   if (!initResp.ok || !initData.error || initData.error.code !== 'ok') {
     throw new Error(
-      `TikTok init echoue: ${initData.error && initData.error.code} — ${
-        (initData.error && initData.error.message) || initResp.status
-      }`
+      `TikTok publish init echoue (HTTP ${initResp.status}): ${JSON.stringify(initData)}`
     );
+  }
+  if (!initData.data || !initData.data.upload_url) {
+    throw new Error(`TikTok publish init: reponse inattendue: ${JSON.stringify(initData)}`);
   }
   const { publish_id, upload_url } = initData.data;
 

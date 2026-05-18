@@ -1,6 +1,21 @@
 const TikTokAccount = require('../models/TikTokAccount');
 const tiktokService = require('../services/tiktokService');
-const asyncHandler = require('../middleware/asyncHandler');
+
+/**
+ * Wrapper de handler dédié TikTok : au lieu de passer l'erreur au errorHandler
+ * global (qui masque le message en "Server Error" en production), on logge le
+ * message réel et on le renvoie au client. Indispensable pour diagnostiquer les
+ * erreurs de l'API TikTok (init, publish, scopes…).
+ */
+const asyncHandler = (fn) => async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    console.error('[tiktok]', msg);
+    res.status(502).json({ success: false, error: msg });
+  }
+};
 
 // Niches autorisées pour la connexion d'un compte TikTok
 const ALLOWED_NICHES = ['business-ia', 'actu', 'aion', 'finance', 'motivation', 'productivite'];
