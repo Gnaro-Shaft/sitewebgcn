@@ -11,11 +11,12 @@ const {
 } = require('../controllers/tiktokController');
 const { protect } = require('../middleware/auth');
 const multer = require('multer');
+const os = require('os');
 
-// Upload vidéo en multipart/form-data (multer, en mémoire). Évite le base64
-// et le conflit avec le parser express.json global (limite 10mb) de server.js.
+// Upload vidéo en multipart/form-data, écrit sur DISQUE temporaire (pas en RAM).
+// memoryStorage chargeait toute la vidéo en mémoire → OOM kill sur petite machine.
 const upload = multer({
-  storage: multer.memoryStorage(),
+  dest: os.tmpdir(),
   limits: { fileSize: 64 * 1024 * 1024 }, // 64 MB max
 });
 

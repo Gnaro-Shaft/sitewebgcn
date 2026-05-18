@@ -105,29 +105,35 @@ exports.getVideos = asyncHandler(async (req, res) => {
 
 // POST /api/tiktok/publish — multipart/form-data { niche, title, privacyLevel, video (fichier) }
 exports.publish = asyncHandler(async (req, res) => {
+  const fs = require('fs');
   const { niche, title, privacyLevel } = req.body;
   if (!niche) {
     return res.status(400).json({ success: false, error: 'Niche manquante' });
   }
-  if (!req.file || !req.file.buffer || !req.file.buffer.length) {
+  if (!req.file || !req.file.path) {
     return res.status(400).json({ success: false, error: 'Fichier video manquant' });
   }
   const account = await TikTokAccount.findOne({ niche });
   if (!account) {
+    fs.unlink(req.file.path, () => {});
     return res.status(404).json({ success: false, error: 'Compte non connecte' });
   }
 
-  // La vidéo arrive en multipart (multer memoryStorage) → buffer direct.
-  const videoBuffer = req.file.buffer;
-
-  const token = await tiktokService.getValidToken(account);
-  const result = await tiktokService.publishVideo({
-    accessToken: token,
-    videoBuffer,
-    title,
-    privacyLevel,
-  });
-  res.json({ success: true, data: result });
+  try {
+    // La vidéo est sur disque (multer diskStorage) — lue une fois, puis supprimée.
+    const videoBuffer = fs.readFileSync(req.file.path);
+    const token = await tiktokService.getValidToken(account);
+    const result = await tiktokService.publishVideo({
+      accessToken: token,
+      videoBuffer,
+      title,
+      privacyLevel,
+    });
+    res.json({ success: true, data: result });
+  } finally {
+    // Toujours nettoyer le fichier temporaire.
+    fs.unlink(req.file.path, () => {});
+  }
 });
 
 // DELETE /api/tiktok/:niche — déconnecte (supprime) le compte
