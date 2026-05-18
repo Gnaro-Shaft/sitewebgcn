@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Autorisation TikTok — GCN Data</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #1a1a2e;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 64px 24px;
+    background: #f7f8fa;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 36px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 8px; }
+  .ok { color: #0a7d3f; }
+  .err { color: #c0392b; }
+  .field {
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  code {
+    display: block;
+    background: #0f172a;
+    color: #7dd3fc;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    word-break: break-all;
+    margin-top: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  button {
+    margin-top: 16px;
+    background: #0f3460;
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: 12px 22px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:hover { background: #0c2647; }
+  .hint { margin-top: 24px; font-size: 0.9rem; color: #6b7280; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="content">Lecture des paramètres…</div>
+</div>
+
+<script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const error = params.get('error');
+    const errorDesc = params.get('error_description');
+    const content = document.getElementById('content');
+
+    if (error) {
+      content.innerHTML =
+        '<h1 class="err">❌ Autorisation refusée</h1>' +
+        '<p>' + (errorDesc || error) + '</p>' +
+        '<p class="hint">Relance la commande d\'autorisation et réessaie.</p>';
+      return;
+    }
+
+    if (!code) {
+      content.innerHTML =
+        '<h1 class="err">❌ Aucun code reçu</h1>' +
+        '<p class="hint">Cette page doit être ouverte via le flux d\'autorisation TikTok.</p>';
+      return;
+    }
+
+    content.innerHTML =
+      '<h1 class="ok">✅ Autorisation réussie</h1>' +
+      '<p>Copie ce code et colle-le dans le terminal du générateur :</p>' +
+      '<div class="field">Code d\'autorisation</div>' +
+      '<code id="code">' + code + '</code>' +
+      (state ? '<div class="field">State (compte)</div><code id="state">' + state + '</code>' : '') +
+      '<button onclick="copyCode()">Copier le code</button>' +
+      '<p class="hint">Tu peux fermer cet onglet après avoir copié le code.</p>';
+
+    window.copyCode = function () {
+      navigator.clipboard.writeText(code).then(function () {
+        const btn = document.querySelector('button');
+        btn.textContent = '✓ Copié';
+        setTimeout(function () { btn.textContent = 'Copier le code'; }, 2000);
+      });
+    };
+  })();
+</script>
+</body>
+</html>
