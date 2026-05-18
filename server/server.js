@@ -119,6 +119,7 @@ app.use('/api/trading', require('./routes/trading'));
 app.use('/api/github', require('./routes/github'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/tiktok', require('./routes/tiktok'));
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {

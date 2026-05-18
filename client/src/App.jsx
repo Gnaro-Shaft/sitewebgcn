@@ -20,6 +20,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDrafts = lazy(() => import('./pages/AdminDrafts'));
 const AdminProjects = lazy(() => import('./pages/AdminProjects'));
 const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+const TikTokStudio = lazy(() => import('./pages/TikTokStudio'));
 const StackPage = lazy(() => import('./pages/StackPage'));
 
 function AnalyticsTracker() {
@@ -80,6 +81,13 @@ export default function App() {
               <Route path="/admin/analytics" element={
                 <ProtectedRoute>
                   <AdminAnalytics />
+                </ProtectedRoute>
+              } />
+
+              {/* Admin TikTok Studio */}
+              <Route path="/admin/tiktok" element={
+                <ProtectedRoute>
+                  <TikTokStudio />
                 </ProtectedRoute>
               } />
 

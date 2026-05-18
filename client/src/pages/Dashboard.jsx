@@ -120,6 +120,16 @@ export default function Dashboard() {
               Analytics
             </a>
             <a
+              href="/admin/tiktok"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
+              title="TikTok Studio"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 4v8.5a3.5 3.5 0 11-3.5-3.5h.5m3-5a4 4 0 004 4" />
+              </svg>
+              TikTok
+            </a>
+            <a
               href="/admin/drafts"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
               title="Admin drafts"
