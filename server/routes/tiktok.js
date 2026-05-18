@@ -10,10 +10,14 @@ const {
   disconnect,
 } = require('../controllers/tiktokController');
 const { protect } = require('../middleware/auth');
+const multer = require('multer');
 
-// Parser JSON dédié à l'upload vidéo (base64) — limite élargie à 60mb,
-// la limite globale de server.js (10mb) étant trop basse pour une vidéo.
-const videoJson = express.json({ limit: '60mb' });
+// Upload vidéo en multipart/form-data (multer, en mémoire). Évite le base64
+// et le conflit avec le parser express.json global (limite 10mb) de server.js.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 64 * 1024 * 1024 }, // 64 MB max
+});
 
 // Toutes les routes TikTok sont protégées par JWT
 router.get('/accounts', protect, getAccounts);
@@ -21,7 +25,7 @@ router.get('/auth-url/:niche', protect, getAuthUrl);
 router.post('/connect', protect, connectAccount);
 router.get('/profile/:niche', protect, getProfile);
 router.get('/videos/:niche', protect, getVideos);
-router.post('/publish', protect, videoJson, publish);
+router.post('/publish', protect, upload.single('video'), publish);
 router.delete('/:niche', protect, disconnect);
 
 module.exports = router;

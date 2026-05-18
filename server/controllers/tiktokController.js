@@ -88,13 +88,13 @@ exports.getVideos = asyncHandler(async (req, res) => {
   res.json({ success: true, data: videos });
 });
 
-// POST /api/tiktok/publish — body { niche, title, privacyLevel, video (base64) }
+// POST /api/tiktok/publish — multipart/form-data { niche, title, privacyLevel, video (fichier) }
 exports.publish = asyncHandler(async (req, res) => {
-  const { niche, title, privacyLevel, video } = req.body;
+  const { niche, title, privacyLevel } = req.body;
   if (!niche) {
     return res.status(400).json({ success: false, error: 'Niche manquante' });
   }
-  if (!video) {
+  if (!req.file || !req.file.buffer || !req.file.buffer.length) {
     return res.status(400).json({ success: false, error: 'Fichier video manquant' });
   }
   const account = await TikTokAccount.findOne({ niche });
@@ -102,9 +102,8 @@ exports.publish = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Compte non connecte' });
   }
 
-  // La vidéo est transmise en base64 (data URI ou chaîne brute) dans le body JSON
-  const base64 = String(video).includes(',') ? String(video).split(',')[1] : String(video);
-  const videoBuffer = Buffer.from(base64, 'base64');
+  // La vidéo arrive en multipart (multer memoryStorage) → buffer direct.
+  const videoBuffer = req.file.buffer;
 
   const token = await tiktokService.getValidToken(account);
   const result = await tiktokService.publishVideo({

@@ -315,27 +315,20 @@ function PublishForm({ niche, onError }) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState('');
 
-  // Convertit le fichier vidéo en base64 pour l'envoyer dans le body JSON
-  const fileToBase64 = (f) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(f);
-    });
-
   const submit = async () => {
     if (!file) return;
     setPublishing(true);
     setResult('');
     onError('');
     try {
-      const base64 = await fileToBase64(file);
-      const res = await api.post('/tiktok/publish', {
-        niche,
-        title,
-        privacyLevel: privacy,
-        video: base64,
+      // Upload en multipart/form-data — pas de base64, pas de limite JSON.
+      const form = new FormData();
+      form.append('niche', niche);
+      form.append('title', title);
+      form.append('privacyLevel', privacy);
+      form.append('video', file);
+      const res = await api.post('/tiktok/publish', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       setResult(`Publication : ${res.data.data.status}`);
     } catch (e) {
