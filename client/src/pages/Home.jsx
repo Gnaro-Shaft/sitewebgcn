@@ -47,6 +47,12 @@ export default function Home() {
           <Contact />
           <footer className="absolute bottom-4 left-0 right-0 text-center text-sm text-gray-500 dark:text-dark-muted">
             &copy; {new Date().getFullYear()} Genaro-Cedric. {t('footer.rights')}
+            {' · '}
+            <a href="/gcn-studio.html" className="hover:underline">GCN Studio</a>
+            {' · '}
+            <a href="/privacy-policy.html" className="hover:underline">Confidentialité</a>
+            {' · '}
+            <a href="/terms.html" className="hover:underline">Conditions</a>
           </footer>
         </section>
       </div>
