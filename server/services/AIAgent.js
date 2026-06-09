@@ -210,6 +210,9 @@ module.exports = {
   generateArticle,
   suggestTopics,
   checkBudget,
+  // Pure functions, exposed for unit tests
+  computeCost,
+  PRICING,
   MODEL,
   MONTHLY_BUDGET,
   YEARLY_BUDGET,

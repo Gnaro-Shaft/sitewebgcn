@@ -391,3 +391,9 @@ exports.getArticleStats = asyncHandler(async (req, res) => {
 
   res.json({ success: true, data });
 });
+
+// Exposed for unit tests — pure functions, no DB/network
+exports._rangeForPeriod = rangeForPeriod;
+exports._parseRange = parseRange;
+exports._computeDelta = computeDelta;
+exports._autoGranularity = autoGranularity;

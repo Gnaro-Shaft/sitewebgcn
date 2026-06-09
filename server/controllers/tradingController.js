@@ -185,3 +185,7 @@ exports.getSignals = async (req, res) => {
     distribution,
   });
 };
+
+// Exposed for unit tests — pure functions, no DB/network
+exports._scoreToLevel = scoreToLevel;
+exports._resolveLevel = resolveLevel;
