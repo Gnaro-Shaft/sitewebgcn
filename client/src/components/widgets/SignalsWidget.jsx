@@ -18,8 +18,8 @@ export default function SignalsWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const fetchData = useCallback(() => {
-    setLoading(true);
+  const fetchData = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     setError(false);
     api.get('/trading/signals?limit=50')
       .then((res) => {
@@ -30,7 +30,12 @@ export default function SignalsWidget() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+    // Bot generates a new signal every ~15min — refresh every 60s to stay live
+    const interval = setInterval(() => fetchData(true), 60_000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   if (loading) return <WidgetShell title={t('widgets.signals')}><Skeleton /></WidgetShell>;
   if (error) return <WidgetShell title={t('widgets.signals')}><WidgetError onRetry={fetchData} /></WidgetShell>;
@@ -71,8 +76,10 @@ export default function SignalsWidget() {
       ) : (
         <div className="space-y-1.5">
           {signals.slice(0, 8).map((s, i) => {
-            const score = s.signal_score || 0;
-            const info = LEVEL_LABELS[String(score)] || LEVEL_LABELS['0'];
+            // Backend normalizes: s.level = -2..+2 bucket, s.score = raw -9..+9
+            const level = typeof s.level === 'number' ? s.level : (s.signal_score || 0);
+            const score = typeof s.score === 'number' ? s.score : level;
+            const info = LEVEL_LABELS[String(level)] || LEVEL_LABELS['0'];
             return (
               <div key={i} className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-2">
@@ -83,8 +90,8 @@ export default function SignalsWidget() {
                   </span>
                 </div>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                  score >= 1 ? 'text-accent bg-accent/10' :
-                  score <= -1 ? 'text-red-500 bg-red-500/10' :
+                  level >= 1 ? 'text-accent bg-accent/10' :
+                  level <= -1 ? 'text-red-500 bg-red-500/10' :
                   'text-gray-500 bg-gray-100 dark:bg-dark-bg3'
                 }`}>
                   {score > 0 ? '+' : ''}{score}

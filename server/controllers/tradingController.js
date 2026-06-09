@@ -128,6 +128,25 @@ exports.getPerformance = async (req, res) => {
   });
 };
 
+// Map a raw score (-9..+9) to a signal_level bucket (-2..+2)
+// Used as a fallback when the bot didn't write signal_level itself.
+function scoreToLevel(score) {
+  if (typeof score !== 'number') return 0;
+  if (score <= -4) return -2;
+  if (score <= -2) return -1;
+  if (score <= 1) return 0;
+  if (score <= 3) return 1;
+  return 2;
+}
+
+// Resolve the level from any of the possible fields (V8 bot uses signal_level,
+// older versions used signal_score, very old ones only had score/raw_score)
+function resolveLevel(s) {
+  if (typeof s.signal_level === 'number') return s.signal_level;
+  if (typeof s.signal_score === 'number') return s.signal_score;
+  return scoreToLevel(s.score ?? s.raw_score);
+}
+
 // GET /api/trading/signals — recent signals
 exports.getSignals = async (req, res) => {
   const conn = getBotConnection();
@@ -142,19 +161,27 @@ exports.getSignals = async (req, res) => {
     .limit(limit)
     .toArray();
 
-  // Signal distribution
+  // Signal distribution by level (-2..+2) + enriched with resolved fields
   const distribution = { '-2': 0, '-1': 0, '0': 0, '1': 0, '2': 0 };
-  for (const s of signals) {
-    const level = String(s.signal_score || 0);
-    if (distribution[level] !== undefined) {
-      distribution[level]++;
+  const enriched = signals.map((s) => {
+    const level = resolveLevel(s);
+    const key = String(level);
+    if (distribution[key] !== undefined) {
+      distribution[key]++;
     }
-  }
+    return {
+      ...s,
+      // Expose normalized fields so the frontend doesn't have to know about
+      // the bot's evolving schema.
+      level,
+      score: s.score ?? s.raw_score ?? 0,
+    };
+  });
 
   res.json({
     success: true,
-    count: signals.length,
-    data: signals,
+    count: enriched.length,
+    data: enriched,
     distribution,
   });
 };
