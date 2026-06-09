@@ -63,6 +63,70 @@ async function recordSpending(costUsd) {
   return usage;
 }
 
+// Fetch recent commit messages from the user's most-recently-pushed public
+// repos. Two-step approach (the events feed truncates PushEvent payloads
+// so we cannot rely on it):
+//   1. GET /users/{u}/repos sorted by pushed_at → recent repos
+//   2. For each repo pushed within `sinceDays`, GET /repos/{u}/{repo}/commits
+//      with ?author={u}&since={iso} → real commit messages
+//
+// No auth → 60 req/h per IP, more than enough for a weekly cron.
+async function fetchRecentGithubActivity({ user, sinceDays = 7 }) {
+  if (!user) return { commits: [], repos: [] };
+
+  const sinceMs = Date.now() - sinceDays * 24 * 60 * 60 * 1000;
+  const sinceIso = new Date(sinceMs).toISOString();
+
+  async function getJson(url) {
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': 'gcn-data-bot' } });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    }
+  }
+
+  const repos = await getJson(
+    `https://api.github.com/users/${user}/repos?sort=pushed&per_page=20`
+  );
+  if (!Array.isArray(repos)) return { commits: [], repos: [] };
+
+  // Keep only repos pushed within the window, skip forks/archived (noise).
+  const activeRepos = repos.filter(
+    (r) =>
+      !r.fork &&
+      !r.archived &&
+      r.pushed_at &&
+      new Date(r.pushed_at).getTime() >= sinceMs
+  );
+
+  // Fetch commits in parallel — each repo gets up to 20 of the user's commits
+  // since the window start. Cap total at 30 messages in the final context.
+  const commitsPerRepo = await Promise.all(
+    activeRepos.map(async (r) => {
+      const list = await getJson(
+        `https://api.github.com/repos/${r.full_name}/commits?author=${encodeURIComponent(
+          user
+        )}&since=${encodeURIComponent(sinceIso)}&per_page=20`
+      );
+      if (!Array.isArray(list)) return [];
+      return list
+        .map((c) => ({
+          repo: r.full_name,
+          message: (c.commit?.message || '').split('\n')[0].slice(0, 200),
+          at: c.commit?.author?.date || r.pushed_at,
+        }))
+        .filter((c) => c.message && !c.message.startsWith('Merge '));
+    })
+  );
+
+  const commits = commitsPerRepo.flat().slice(0, 30);
+  const reposTouched = [...new Set(commits.map((c) => c.repo))];
+
+  return { commits, repos: reposTouched };
+}
+
 // Build context from user's recent activity
 async function buildContext() {
   // Recent projects (public)
@@ -206,12 +270,85 @@ Les sujets doivent :
   return { topics, costUsd };
 }
 
+// Weekly auto-draft: Claude picks the best topic AND writes the article in
+// a single API call, based on the user's last 7 days of GitHub activity +
+// recent projects + existing articles (to avoid repeating).
+//
+// Returns: { article, costUsd, inputTokens, outputTokens, monthlySpent }
+async function generateWeeklyDraft({ githubUser, sinceDays = 7, language = 'fr' } = {}) {
+  await checkBudget();
+
+  const [context, activity] = await Promise.all([
+    buildContext(),
+    fetchRecentGithubActivity({ user: githubUser, sinceDays }),
+  ]);
+
+  // If there's no activity at all, return a clear signal upstream rather
+  // than burning a Claude call on nothing.
+  if (activity.commits.length === 0) {
+    return { article: null, skipped: 'no-recent-activity', costUsd: 0 };
+  }
+
+  const userMessage = `Choisis UN sujet d'article de blog tech à partir de mon activité de ces 7 derniers jours, puis écris l'article complet.
+
+ACTIVITÉ GITHUB (${activity.commits.length} commits sur ${activity.repos.length} repos) :
+${JSON.stringify(activity.commits, null, 2)}
+
+REPOS TOUCHÉS : ${activity.repos.join(', ')}
+
+MES PROJETS RÉCENTS (contexte général) :
+${JSON.stringify(context.projects, null, 2)}
+
+ARTICLES DÉJÀ PUBLIÉS (NE PAS REPRENDRE LE MÊME ANGLE) :
+${JSON.stringify(context.existingArticles, null, 2)}
+
+INSTRUCTIONS :
+1. Identifie UN problème concret que j'ai résolu cette semaine (cherche des patterns dans les commits)
+2. Écris l'article en racontant : le contexte, le piège rencontré, la solution, la leçon
+3. Tutoie le lecteur (ton blog), première personne pour moi
+4. Si tu ne vois aucun sujet vraiment intéressant, choisis quand même le meilleur disponible — sortir un article moyen vaut mieux que rien
+
+Réponds en JSON strict comme dans ton rôle.
+Langue : ${language === 'en' ? 'Anglais' : 'Français'}.`;
+
+  const response = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const costUsd = computeCost(response.usage);
+  const usage = await recordSpending(costUsd);
+
+  const rawText = response.content[0]?.text || '';
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('AI response is not valid JSON: ' + rawText.slice(0, 200));
+  }
+  const article = JSON.parse(jsonMatch[0]);
+
+  return {
+    article,
+    costUsd,
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    monthlySpent: usage.spendingUsd,
+    activitySummary: {
+      commitsAnalyzed: activity.commits.length,
+      reposTouched: activity.repos,
+    },
+  };
+}
+
 module.exports = {
   generateArticle,
   suggestTopics,
+  generateWeeklyDraft,
   checkBudget,
   // Pure functions, exposed for unit tests
   computeCost,
+  fetchRecentGithubActivity,
   PRICING,
   MODEL,
   MONTHLY_BUDGET,

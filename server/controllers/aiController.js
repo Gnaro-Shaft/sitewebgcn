@@ -1,6 +1,8 @@
 const Article = require('../models/Article');
+const User = require('../models/User');
 const AIUsage = require('../models/AIUsage');
-const { generateArticle, suggestTopics, checkBudget, MODEL, MONTHLY_BUDGET, YEARLY_BUDGET } = require('../services/AIAgent');
+const { generateArticle, suggestTopics, generateWeeklyDraft, checkBudget, MODEL, MONTHLY_BUDGET, YEARLY_BUDGET } = require('../services/AIAgent');
+const { sendDraftNotification } = require('../services/EmailService');
 const asyncHandler = require('../middleware/asyncHandler');
 
 // GET /api/ai/usage — admin, current AI usage stats
@@ -77,6 +79,81 @@ exports.generateArticle = asyncHandler(async (req, res) => {
       outputTokens: result.outputTokens,
       monthlySpent: result.monthlySpent,
       saved: !!savedArticle,
+    },
+  });
+});
+
+// POST /api/ai/auto-draft — cron-only, generate a weekly draft from GitHub activity
+// Auth via X-Cron-Secret header (not JWT, no user session)
+exports.autoDraft = asyncHandler(async (req, res) => {
+  const provided = req.headers['x-cron-secret'];
+  const expected = process.env.CRON_SECRET;
+  if (!expected || provided !== expected) {
+    return res.status(401).json({ success: false, error: 'Invalid cron secret' });
+  }
+
+  const githubUser = process.env.GITHUB_USER || 'Gnaro-Shaft';
+  const result = await generateWeeklyDraft({
+    githubUser,
+    sinceDays: 7,
+    language: 'fr',
+  });
+
+  if (result.skipped === 'no-recent-activity') {
+    return res.json({
+      success: true,
+      skipped: 'no-recent-activity',
+      message: 'No GitHub commits in the last 7 days — no draft generated.',
+    });
+  }
+
+  if (!result.article) {
+    return res.status(500).json({ success: false, error: 'No article returned by AI' });
+  }
+
+  // Find an admin user to attribute the draft to (required by Article.author)
+  const admin = await User.findOne({ role: 'admin' });
+  if (!admin) {
+    return res.status(500).json({ success: false, error: 'No admin user found' });
+  }
+
+  // Ensure unique slug
+  const articleData = {
+    title: result.article.title,
+    slug: result.article.slug,
+    excerpt: result.article.excerpt,
+    content: result.article.content,
+    tags: result.article.tags || [],
+    published: false,
+    author: admin._id,
+  };
+  let slugBase = articleData.slug;
+  let slugSuffix = 0;
+  while (await Article.findOne({ slug: articleData.slug })) {
+    slugSuffix += 1;
+    articleData.slug = `${slugBase}-${slugSuffix}`;
+  }
+  const savedArticle = await Article.create(articleData);
+
+  // Fire-and-forget email notification — don't fail the cron if SMTP is down
+  sendDraftNotification({
+    article: result.article,
+    activitySummary: result.activitySummary,
+  }).catch((err) => {
+    console.error('Failed to send draft notification email:', err.message);
+  });
+
+  res.json({
+    success: true,
+    data: {
+      articleId: savedArticle._id,
+      title: savedArticle.title,
+      slug: savedArticle.slug,
+      tags: savedArticle.tags,
+      costUsd: result.costUsd,
+      monthlySpent: result.monthlySpent,
+      commitsAnalyzed: result.activitySummary.commitsAnalyzed,
+      reposTouched: result.activitySummary.reposTouched,
     },
   });
 });

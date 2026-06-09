@@ -1,0 +1,49 @@
+name: Weekly Blog Auto-Draft
+
+# Fires every Monday at 09:00 UTC (= 10:00 Paris in winter, 11:00 in summer).
+# Calls the backend's POST /api/ai/auto-draft endpoint, which:
+#   1. Reads the user's last 7 days of public GitHub commits
+#   2. Asks Claude to pick a topic + write the article
+#   3. Saves it as a DRAFT (not published)
+#   4. Emails the admin a link to /admin/drafts
+#
+# Auth: X-Cron-Secret header (CRON_SECRET stored as a GitHub repo secret).
+# Trigger manually via the Actions tab if you want a draft mid-week.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # allow manual runs from the Actions UI
+
+jobs:
+  generate-draft:
+    name: Generate weekly draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /api/ai/auto-draft on production
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # Fail loudly if the secret is missing — better than a silent skip
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not set in repo secrets"
+            exit 1
+          fi
+
+          RESPONSE=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST https://gcn-data.fr/api/ai/auto-draft \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+
+          BODY=$(echo "$RESPONSE" | sed -n '1,/HTTP_STATUS:/p' | sed '$d')
+          STATUS=$(echo "$RESPONSE" | grep -oE "HTTP_STATUS:[0-9]+" | cut -d: -f2)
+
+          echo "HTTP status: $STATUS"
+          echo "Body: $BODY"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::auto-draft failed with status $STATUS"
+            exit 1
+          fi
