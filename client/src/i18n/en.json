@@ -289,6 +289,21 @@
     "noReferrers": "No external referrers yet",
     "noCountries": "No country data yet"
   },
+  "admin": {
+    "upload": {
+      "dragHere": "Drag an image here",
+      "choose": "or click to choose a file",
+      "uploading": "Uploading…",
+      "preview": "Preview",
+      "dragToReplace": "Drag a new image to replace",
+      "remove": "Remove image",
+      "externalUrl": "Or paste an external URL",
+      "tooLarge": "File too large (max 5 MB)",
+      "invalidType": "Unsupported file type (PNG, JPG, WebP, GIF only)",
+      "notConfigured": "Upload service is not configured on the server",
+      "error": "Upload failed, please try again"
+    }
+  },
   "adminProjects": {
     "title": "Project management",
     "public": "Public",

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import ImageUploader from '../components/ui/ImageUploader';
 
 export default function AdminProjects() {
   const { t } = useTranslation();
@@ -334,8 +335,12 @@ function EditMode({ project, onChange, onCancel, onSave, saving, t }) {
             <input type="url" value={project.liveUrl || ''} onChange={(e) => onChange({ ...project, liveUrl: e.target.value })} className={inputClass} />
           </Field>
         </div>
-        <Field label="Image URL (ex: /images/mon-projet.png)">
-          <input type="text" value={project.imageUrl || ''} onChange={(e) => onChange({ ...project, imageUrl: e.target.value })} className={inputClass} />
+        <Field label="Image">
+          <ImageUploader
+            value={project.imageUrl || ''}
+            onChange={(url) => onChange({ ...project, imageUrl: url })}
+            folder="projects"
+          />
         </Field>
 
         <div className="flex gap-4 pt-2">

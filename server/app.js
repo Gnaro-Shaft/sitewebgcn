@@ -129,6 +129,7 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/lighthouse', require('./routes/lighthouse'));
 app.use('/api/tiktok', require('./routes/tiktok'));
+app.use('/api/upload', require('./routes/upload'));
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {

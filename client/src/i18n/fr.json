@@ -289,6 +289,21 @@
     "noReferrers": "Aucune source externe encore",
     "noCountries": "Pas encore de données pays"
   },
+  "admin": {
+    "upload": {
+      "dragHere": "Glisse une image ici",
+      "choose": "ou clique pour choisir un fichier",
+      "uploading": "Envoi en cours…",
+      "preview": "Apercu",
+      "dragToReplace": "Glisse une nouvelle image pour remplacer",
+      "remove": "Retirer l'image",
+      "externalUrl": "Ou colle une URL externe",
+      "tooLarge": "Fichier trop volumineux (max 5 Mo)",
+      "invalidType": "Type de fichier non supporte (PNG, JPG, WebP, GIF uniquement)",
+      "notConfigured": "Le service d'upload n'est pas configure sur le serveur",
+      "error": "Erreur d'upload, reessaye"
+    }
+  },
   "adminProjects": {
     "title": "Gestion des projets",
     "public": "Publics",
