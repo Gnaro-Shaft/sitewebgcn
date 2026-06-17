@@ -107,6 +107,19 @@
     },
     "footer": {
       "builtWith": "Site construit avec attention. Code source ouvert."
+    },
+    "lighthouse": {
+      "title": "Scores Lighthouse",
+      "hint": "Mesures fraîches depuis l'API PageSpeed Insights de Google. Mises à jour automatique chaque semaine. Pas de capture d'écran maquillée — clique sur le lien sous les badges pour vérifier en live.",
+      "mobile": "Mobile",
+      "desktop": "Desktop",
+      "performance": "Performance",
+      "accessibility": "Accessibilité",
+      "bestPractices": "Best Practices",
+      "seo": "SEO",
+      "measuredAt": "Mesuré le",
+      "verifyOnGoogle": "Vérifier sur Google PageSpeed",
+      "notYetAvailable": "Première mesure en cours — repasse dans quelques minutes."
     }
   },
   "hero": {

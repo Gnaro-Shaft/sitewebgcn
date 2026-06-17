@@ -107,6 +107,19 @@
     },
     "footer": {
       "builtWith": "Site built with care. Source code is open."
+    },
+    "lighthouse": {
+      "title": "Lighthouse Scores",
+      "hint": "Fresh scores from Google's PageSpeed Insights API. Auto-refreshed weekly. No photoshopped screenshot — click the link under the badges to verify live.",
+      "mobile": "Mobile",
+      "desktop": "Desktop",
+      "performance": "Performance",
+      "accessibility": "Accessibility",
+      "bestPractices": "Best Practices",
+      "seo": "SEO",
+      "measuredAt": "Measured on",
+      "verifyOnGoogle": "Verify on Google PageSpeed",
+      "notYetAvailable": "First measurement in progress — check back in a few minutes."
     }
   },
   "hero": {

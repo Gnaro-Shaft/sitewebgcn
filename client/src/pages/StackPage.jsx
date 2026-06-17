@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import SEO from '../components/SEO';
 import ArchitectureDiagram from '../components/stack/ArchitectureDiagram';
+import LighthouseBadges from '../components/stack/LighthouseBadges';
 
 export default function StackPage() {
   const { t } = useTranslation();
@@ -20,6 +21,8 @@ export default function StackPage() {
       </header>
 
       <Stats />
+
+      <LighthouseBadges />
 
       <section className="mb-16">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-dark-text mb-6">

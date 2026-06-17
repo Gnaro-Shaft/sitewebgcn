@@ -1,0 +1,46 @@
+name: Weekly Lighthouse refresh
+
+# Fires every Monday at 10:00 UTC — one hour after the blog auto-draft
+# (cron at 9:00) so the two crons don't compete for the lighthouse refresh
+# rate limit on the backend.
+#
+# Calls POST /api/lighthouse/refresh on production with the X-Cron-Secret.
+# Backend fetches PageSpeed Insights API for both mobile + desktop, saves
+# the latest scores in MongoDB, and they show up on /stack within seconds.
+
+on:
+  schedule:
+    - cron: '0 10 * * 1'
+  workflow_dispatch: # manual trigger from the Actions UI for testing
+
+jobs:
+  refresh:
+    name: Refresh Lighthouse scores
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /api/lighthouse/refresh on production
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not set in repo secrets"
+            exit 1
+          fi
+
+          RESPONSE=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST https://gcn-data.fr/api/lighthouse/refresh \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+
+          BODY=$(echo "$RESPONSE" | sed -n '1,/HTTP_STATUS:/p' | sed '$d')
+          STATUS=$(echo "$RESPONSE" | grep -oE "HTTP_STATUS:[0-9]+" | cut -d: -f2)
+
+          echo "HTTP status: $STATUS"
+          echo "Body: $BODY"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Lighthouse refresh failed with status $STATUS"
+            exit 1
+          fi
