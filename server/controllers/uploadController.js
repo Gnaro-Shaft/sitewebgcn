@@ -24,6 +24,15 @@ exports.uploadImage = asyncHandler(async (req, res) => {
     });
     res.json({ success: true, data: { url, publicId } });
   } catch (err) {
+    // Log full Cloudinary error to Fly logs so we can see why it failed
+    // (the response only carries the short message; the SDK often attaches
+    // a more useful `error.http_code` + nested `error.error.message`).
+    console.error('[upload] Cloudinary upload failed:', {
+      message: err.message,
+      http_code: err.http_code,
+      name: err.name,
+      cloudinary_error: err.error,
+    });
     res
       .status(502)
       .json({ success: false, error: 'CLOUDINARY_FAILED', detail: err.message });
