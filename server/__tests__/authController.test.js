@@ -1,29 +1,41 @@
 // Tests for the auth controller — register, login, getMe.
-// Approach: replace User.findOne/create directly with our own functions
-// before each test, restore after. This works regardless of whether the
-// methods are own properties or inherited from Mongoose's base Model.
+// Replaces User.findOne/create + RefreshToken.create directly with vi.fn()
+// (vi.spyOn doesn't always work on inherited Mongoose static methods).
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
 const auth = require('../controllers/authController');
 
-const origFindOne = User.findOne;
-const origCreate = User.create;
+const origUserFindOne = User.findOne;
+const origUserCreate = User.create;
+const origRefreshCreate = RefreshToken.create;
+const origRefreshGenerateRaw = RefreshToken.generateRaw;
+const origRefreshHash = RefreshToken.hash;
 
 let findOne;
 let create;
+let refreshCreate;
 
 beforeEach(() => {
   findOne = vi.fn();
   create = vi.fn();
+  refreshCreate = vi.fn().mockResolvedValue({});
   User.findOne = findOne;
   User.create = create;
+  RefreshToken.create = refreshCreate;
+  // generateRaw and hash are pure — deterministic in tests
+  RefreshToken.generateRaw = () => 'fake-refresh-token-' + 'a'.repeat(46);
+  RefreshToken.hash = (raw) => 'hash-of-' + raw;
 });
 
 afterEach(() => {
-  User.findOne = origFindOne;
-  User.create = origCreate;
+  User.findOne = origUserFindOne;
+  User.create = origUserCreate;
+  RefreshToken.create = origRefreshCreate;
+  RefreshToken.generateRaw = origRefreshGenerateRaw;
+  RefreshToken.hash = origRefreshHash;
 });
 
 function mockRes() {
@@ -35,8 +47,6 @@ function mockRes() {
 
 function mockNext() {
   return vi.fn((err) => {
-    // If asyncHandler caught an error and called next(err), surface it so
-    // failing tests don't just silently report "not called".
     if (err) throw err;
   });
 }
@@ -45,7 +55,7 @@ describe('register', () => {
   it('returns 400 when email already exists', async () => {
     findOne.mockResolvedValue({ _id: 'existing', email: 'a@b.com' });
 
-    const req = { body: { email: 'a@b.com', password: 'x' } };
+    const req = { body: { email: 'a@b.com', password: 'x' }, ip: '127.0.0.1', headers: {} };
     const res = mockRes();
 
     await auth.register(req, res, mockNext());
@@ -58,7 +68,7 @@ describe('register', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('creates user and returns 201 + token when email is free', async () => {
+  it('creates user and returns 201 + access + refresh tokens when email is free', async () => {
     findOne.mockResolvedValue(null);
     create.mockResolvedValue({
       _id: 'newid',
@@ -67,17 +77,19 @@ describe('register', () => {
       generateToken: () => 'JWT_FAKE',
     });
 
-    const req = { body: { email: 'new@x.com', password: 'secret123' } };
+    const req = { body: { email: 'new@x.com', password: 'secret123' }, ip: '1.2.3.4', headers: {} };
     const res = mockRes();
 
     await auth.register(req, res, mockNext());
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith({
-      success: true,
-      token: 'JWT_FAKE',
-      user: { id: 'newid', email: 'new@x.com', role: 'user' },
-    });
+    const payload = res.json.mock.calls[0][0];
+    expect(payload.success).toBe(true);
+    expect(payload.token).toBe('JWT_FAKE'); // back-compat alias
+    expect(payload.accessToken).toBe('JWT_FAKE');
+    expect(payload.refreshToken).toMatch(/^fake-refresh-token-/);
+    expect(payload.user).toEqual({ id: 'newid', email: 'new@x.com', role: 'user' });
+    expect(refreshCreate).toHaveBeenCalledTimes(1);
   });
 
   it('never leaks the password back in the response', async () => {
@@ -90,7 +102,7 @@ describe('register', () => {
       generateToken: () => 't',
     });
 
-    const req = { body: { email: 'a@b.com', password: 'plaintext' } };
+    const req = { body: { email: 'a@b.com', password: 'plaintext' }, headers: {} };
     const res = mockRes();
     await auth.register(req, res, mockNext());
 
@@ -102,7 +114,6 @@ describe('register', () => {
 
 describe('login', () => {
   function userWithSelect(returnedUser) {
-    // login does User.findOne(...).select('+password') — chain mock
     return {
       select: vi.fn().mockResolvedValue(returnedUser),
     };
@@ -111,7 +122,7 @@ describe('login', () => {
   it('returns 401 (Invalid credentials) when user does not exist', async () => {
     findOne.mockReturnValue(userWithSelect(null));
 
-    const req = { body: { email: 'noone@x.com', password: 'whatever' } };
+    const req = { body: { email: 'noone@x.com', password: 'whatever' }, headers: {} };
     const res = mockRes();
     await auth.login(req, res, mockNext());
 
@@ -132,12 +143,10 @@ describe('login', () => {
     };
     findOne.mockReturnValue(userWithSelect(user));
 
-    const req = { body: { email: 'a@b.com', password: 'WRONG' } };
+    const req = { body: { email: 'a@b.com', password: 'WRONG' }, headers: {} };
     const res = mockRes();
     await auth.login(req, res, mockNext());
 
-    // Same error message as for non-existent user — key security property:
-    // an attacker cannot tell which emails are registered.
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
@@ -145,7 +154,7 @@ describe('login', () => {
     });
   });
 
-  it('returns 200 + token + user when credentials are valid', async () => {
+  it('returns 200 + access + refresh + user when credentials are valid', async () => {
     const user = {
       _id: 'id1',
       email: 'admin@gcn.dev',
@@ -155,16 +164,18 @@ describe('login', () => {
     };
     findOne.mockReturnValue(userWithSelect(user));
 
-    const req = { body: { email: 'admin@gcn.dev', password: 'good' } };
+    const req = { body: { email: 'admin@gcn.dev', password: 'good' }, headers: {} };
     const res = mockRes();
     await auth.login(req, res, mockNext());
 
-    expect(res.json).toHaveBeenCalledWith({
-      success: true,
-      token: 'JWT_OK',
-      user: { id: 'id1', email: 'admin@gcn.dev', role: 'admin' },
-    });
+    const payload = res.json.mock.calls[0][0];
+    expect(payload.success).toBe(true);
+    expect(payload.accessToken).toBe('JWT_OK');
+    expect(payload.token).toBe('JWT_OK'); // back-compat
+    expect(payload.refreshToken).toMatch(/^fake-refresh-token-/);
+    expect(payload.user).toEqual({ id: 'id1', email: 'admin@gcn.dev', role: 'admin' });
     expect(user.generateToken).toHaveBeenCalledTimes(1);
+    expect(refreshCreate).toHaveBeenCalledTimes(1);
   });
 });
 

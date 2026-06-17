@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-// Decode JWT payload without library
+// Decode JWT payload without a library — used only to detect access-token
+// rotation, not to drive a countdown (the user no longer needs to know).
 function decodeToken(token) {
   try {
     const payload = token.split('.')[1];
@@ -11,55 +12,43 @@ function decodeToken(token) {
   }
 }
 
+// With refresh-token rotation, the access token transparently refreshes
+// every ~15min for up to 7 days. We don't show a countdown anymore — it
+// was misleading (the dashboard would say "0:30 left" while the user was
+// still perfectly logged in). Instead, show a small "Active" dot whose
+// pulse animation acknowledges the user that their session is healthy.
+//
+// On hover, the tooltip shows the last rotation time so power-users can
+// verify the refresh loop is alive.
 export default function SessionTimer() {
-  const { token, logout } = useAuth();
-  const [remaining, setRemaining] = useState(null);
-  const [warning, setWarning] = useState(false);
+  const { accessToken } = useAuth();
+  const [lastRotation, setLastRotation] = useState(null);
 
+  // Watch for access-token rotation by tracking the JWT's "iat" claim
   useEffect(() => {
-    if (!token) return;
+    if (!accessToken) return;
+    const payload = decodeToken(accessToken);
+    if (payload?.iat) {
+      setLastRotation(new Date(payload.iat * 1000));
+    }
+  }, [accessToken]);
 
-    const payload = decodeToken(token);
-    if (!payload?.exp) return;
+  if (!accessToken) return null;
 
-    const expiresAt = payload.exp * 1000; // ms
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const diff = expiresAt - now;
-
-      if (diff <= 0) {
-        clearInterval(interval);
-        logout();
-        return;
-      }
-
-      setRemaining(diff);
-      setWarning(diff < 2 * 60 * 1000); // warning at < 2min
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [token, logout]);
-
-  if (remaining === null) return null;
-
-  const minutes = Math.floor(remaining / 60000);
-  const seconds = Math.floor((remaining % 60000) / 1000);
-  const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const tooltip = lastRotation
+    ? `Session active — last refresh ${lastRotation.toLocaleTimeString()}`
+    : 'Session active';
 
   return (
     <div
-      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium transition-all ${
-        warning
-          ? 'bg-red-500/20 text-red-400 animate-pulse'
-          : 'bg-accent/10 text-accent'
-      }`}
-      title="Session expires in"
+      className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent"
+      title={tooltip}
     >
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      {display}
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-60" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+      </span>
+      Active
     </div>
   );
 }
