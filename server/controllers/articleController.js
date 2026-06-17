@@ -1,6 +1,8 @@
 const Article = require('../models/Article');
 const asyncHandler = require('../middleware/asyncHandler');
-const { publishToAll } = require('../services/SocialPublisher');
+// Namespace import (not destructured) so vi.spyOn() in tests can replace
+// publishToAll at runtime. Destructured imports capture at load time.
+const SocialPublisher = require('../services/SocialPublisher');
 
 // GET /api/articles — public, only published (with pagination)
 exports.getArticles = asyncHandler(async (req, res) => {
@@ -85,7 +87,7 @@ exports.publishArticle = asyncHandler(async (req, res) => {
 
   if (isFirstPublish) {
     // Fire-and-forget: don't block the response on social posting
-    publishToAll(article)
+    SocialPublisher.publishToAll(article)
       .then(async (results) => {
         // Update socialPosted flags after webhooks return
         article.socialPosted = {
@@ -118,7 +120,7 @@ exports.triggerSocialPublish = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Article must be published first' });
   }
 
-  const results = await publishToAll(article);
+  const results = await SocialPublisher.publishToAll(article);
 
   // Update flags
   article.socialPosted = {

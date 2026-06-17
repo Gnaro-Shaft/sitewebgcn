@@ -1,13 +1,17 @@
 const Article = require('../models/Article');
 const User = require('../models/User');
 const AIUsage = require('../models/AIUsage');
-const { generateArticle, suggestTopics, generateWeeklyDraft, checkBudget, MODEL, MONTHLY_BUDGET, YEARLY_BUDGET } = require('../services/AIAgent');
-const { sendDraftNotification } = require('../services/EmailService');
+// Import as namespace (not destructured) so vi.spyOn() from tests can
+// replace methods at runtime. Destructured imports capture the reference
+// at module load and become un-mockable.
+const AIAgent = require('../services/AIAgent');
+const EmailService = require('../services/EmailService');
 const asyncHandler = require('../middleware/asyncHandler');
+const { MODEL, MONTHLY_BUDGET, YEARLY_BUDGET } = AIAgent;
 
 // GET /api/ai/usage — admin, current AI usage stats
 exports.getUsage = asyncHandler(async (req, res) => {
-  const budget = await checkBudget().catch((err) => ({ error: err.message }));
+  const budget = await AIAgent.checkBudget().catch((err) => ({ error: err.message }));
   const monthly = await AIUsage.getCurrent();
   const yearlySpent = await AIUsage.getYearSpending();
 
@@ -32,7 +36,7 @@ exports.getUsage = asyncHandler(async (req, res) => {
 // POST /api/ai/suggest-topics — admin, generate topic suggestions
 exports.suggestTopics = asyncHandler(async (req, res) => {
   const { count = 3 } = req.body;
-  const result = await suggestTopics({ count });
+  const result = await AIAgent.suggestTopics({ count });
   res.json({ success: true, data: result });
 });
 
@@ -44,7 +48,7 @@ exports.generateArticle = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Topic is required (min 3 chars)' });
   }
 
-  const result = await generateArticle({ topic: topic.trim(), language });
+  const result = await AIAgent.generateArticle({ topic: topic.trim(), language });
 
   let savedArticle = null;
   if (autoSave && result.article) {
@@ -93,7 +97,7 @@ exports.autoDraft = asyncHandler(async (req, res) => {
   }
 
   const githubUser = process.env.GITHUB_USER || 'Gnaro-Shaft';
-  const result = await generateWeeklyDraft({
+  const result = await AIAgent.generateWeeklyDraft({
     githubUser,
     sinceDays: 7,
     language: 'fr',
@@ -136,7 +140,7 @@ exports.autoDraft = asyncHandler(async (req, res) => {
   const savedArticle = await Article.create(articleData);
 
   // Fire-and-forget email notification — don't fail the cron if SMTP is down
-  sendDraftNotification({
+  EmailService.sendDraftNotification({
     article: result.article,
     activitySummary: result.activitySummary,
   }).catch((err) => {

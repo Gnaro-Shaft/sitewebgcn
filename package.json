@@ -6,8 +6,10 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "nodemon server/server.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "VITEST_EXCLUDE='server/__tests__/integration/**' vitest run",
+    "test:watch": "VITEST_EXCLUDE='server/__tests__/integration/**' vitest",
+    "test:integration": "VITEST_INCLUDE='server/__tests__/integration/**/*.test.js' vitest run",
+    "test:all": "vitest run"
   },
   "keywords": [],
   "author": "Genaro-Cedric",
@@ -31,8 +33,10 @@
     "pdfkit": "^0.18.0"
   },
   "devDependencies": {
+    "mongodb-memory-server": "^11.2.0",
     "nodemon": "^3.1.14",
     "sharp": "^0.34.5",
+    "supertest": "^7.2.2",
     "vitest": "^4.1.8"
   }
 }
