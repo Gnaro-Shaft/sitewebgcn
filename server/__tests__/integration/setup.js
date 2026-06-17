@@ -11,6 +11,18 @@
 // CRITICAL: set NODE_ENV before requiring app. app.js gates dotenv on this,
 // and rate limiters check NODE_ENV at module load time.
 process.env.NODE_ENV = 'test';
+
+// SAFETY NET: unset every URL that could trigger a real external write.
+// vi.spyOn mocks at the controller level are belt; this is suspenders.
+// If a future test forgets to spy, the SocialPublisher will see an empty
+// URL and graceful-skip rather than post to my actual LinkedIn account.
+delete process.env.LINKEDIN_WEBHOOK_URL;
+delete process.env.X_WEBHOOK_URL;
+delete process.env.SMTP_HOST;
+delete process.env.SMTP_USER;
+delete process.env.SMTP_PASS;
+delete process.env.ANTHROPIC_API_KEY;
+delete process.env.CRON_SECRET; // we set our own below
 // Make all secrets present and benign so env-dependent code doesn't crash
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-' + 'x'.repeat(40);
 process.env.JWT_EXPIRE = '15m';
