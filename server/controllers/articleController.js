@@ -4,6 +4,28 @@ const asyncHandler = require('../middleware/asyncHandler');
 // publishToAll at runtime. Destructured imports capture at load time.
 const SocialPublisher = require('../services/SocialPublisher');
 
+// Approx 200 wpm reading rate. Math.max(1, …) avoids "0 min" for very
+// short articles (a 1-word teaser still shows "1 min").
+function calculateReadingTime(content) {
+  if (!content || typeof content !== 'string') return 1;
+  const words = content.split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
+
+// Add a readingTime field to the JSON-serialized article. Optionally
+// strip content (useful for list endpoints — saves bandwidth, the listing
+// only needs the excerpt).
+function withReadingTime(doc, { stripContent = false } = {}) {
+  const obj = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
+  obj.readingTime = calculateReadingTime(obj.content);
+  if (stripContent) delete obj.content;
+  return obj;
+}
+
+// Exposed for unit tests
+exports._calculateReadingTime = calculateReadingTime;
+exports._withReadingTime = withReadingTime;
+
 // GET /api/articles — public, only published (with pagination)
 exports.getArticles = asyncHandler(async (req, res) => {
   const { tag } = req.query;
@@ -17,12 +39,16 @@ exports.getArticles = asyncHandler(async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
   const skip = (page - 1) * limit;
 
+  // We need `content` to compute readingTime, then strip it before sending.
+  // Net bandwidth: ~6 bytes extra per article (readingTime int) vs the prior
+  // shape. Trade-off: one extra projection on a small page-size collection.
   const [articles, total] = await Promise.all([
-    Article.find(filter).select('-content').sort({ publishedAt: -1 }).skip(skip).limit(limit),
+    Article.find(filter).sort({ publishedAt: -1 }).skip(skip).limit(limit),
     Article.countDocuments(filter),
   ]);
 
-  res.json({ success: true, count: articles.length, total, page, data: articles });
+  const data = articles.map((a) => withReadingTime(a, { stripContent: true }));
+  res.json({ success: true, count: data.length, total, page, data });
 });
 
 // GET /api/articles/:slug — public, by slug (increments views)
@@ -37,13 +63,14 @@ exports.getArticleBySlug = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Article not found' });
   }
 
-  res.json({ success: true, data: article });
+  res.json({ success: true, data: withReadingTime(article) });
 });
 
 // GET /api/articles/admin/all — admin, all articles
 exports.getAllArticles = asyncHandler(async (req, res) => {
   const articles = await Article.find().sort({ createdAt: -1 });
-  res.json({ success: true, count: articles.length, data: articles });
+  const data = articles.map((a) => withReadingTime(a));
+  res.json({ success: true, count: data.length, data });
 });
 
 // POST /api/articles — admin, create draft

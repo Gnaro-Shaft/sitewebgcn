@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 import ArticleCard from '../ui/ArticleCard';
+import FeaturedArticleCard from '../ui/FeaturedArticleCard';
 import useInView from '../../hooks/useInView';
 
 export default function Blog({ limit }) {
@@ -28,12 +29,26 @@ export default function Blog({ limit }) {
   const displayed = limit ? articles.slice(0, limit) : articles;
   const skeletonCount = limit || 6;
 
+  // On the full /blog page only (no `limit`), promote the most recent
+  // article to a featured hero above the grid. Homepage usages keep
+  // their existing flat grid.
+  const showFeatured = !limit && displayed.length > 0;
+  const featured = showFeatured ? displayed[0] : null;
+  const rest = showFeatured ? displayed.slice(1) : displayed;
+
   return (
     <section ref={ref} className={`py-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-dark-text">
-          {t('blog.title')}
-        </h2>
+      <div className="flex items-start justify-between mb-8 gap-6 flex-wrap">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-dark-text">
+            {t('blog.title')}
+          </h2>
+          {!limit && (
+            <p className="mt-3 text-base text-gray-600 dark:text-dark-muted leading-relaxed">
+              {t('blog.intro')}
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {!limit && (
             <a
@@ -76,13 +91,16 @@ export default function Blog({ limit }) {
       ) : displayed.length === 0 ? (
         <p className="text-gray-500 dark:text-dark-muted">{t('blog.noArticles')}</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {displayed.map((a, i) => (
-            <div key={a._id} className={`transition-all duration-500 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${(i + 1) * 100}ms` }}>
-              <ArticleCard article={a} />
-            </div>
-          ))}
-        </div>
+        <>
+          {featured && <FeaturedArticleCard article={featured} />}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {rest.map((a, i) => (
+              <div key={a._id} className={`transition-all duration-500 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${(i + 1) * 100}ms` }}>
+                <ArticleCard article={a} />
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </section>
   );

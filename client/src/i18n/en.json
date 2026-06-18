@@ -179,6 +179,11 @@
   },
   "blog": {
     "title": "Blog",
+    "intro": "Notes on applied AI, RAG, automation, and data. Technical articles — no fluff: what worked, what broke my brain, and why.",
+    "featured": "Featured",
+    "read": "Read article",
+    "readingTime_one": "{{count}} min read",
+    "readingTime_other": "{{count}} min read",
     "backToBlog": "Back to blog",
     "notFound": "Article not found",
     "loading": "Loading...",

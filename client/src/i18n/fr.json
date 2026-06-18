@@ -179,6 +179,11 @@
   },
   "blog": {
     "title": "Blog",
+    "intro": "Je note ici mes apprentissages sur l'IA appliquée, le RAG, l'automatisation et la donnée. Articles techniques sans bullshit — ce qui a marché, ce qui m'a pris la tête, et pourquoi.",
+    "featured": "À la une",
+    "read": "Lire l'article",
+    "readingTime_one": "{{count}} min de lecture",
+    "readingTime_other": "{{count}} min de lecture",
     "backToBlog": "Retour au blog",
     "notFound": "Article introuvable",
     "loading": "Chargement...",
