@@ -350,13 +350,35 @@ function PublishForm({ niche, onError }) {
         />
       </div>
       <div>
-        <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">Titre / légende</label>
+        <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
+          Légende + hashtags (.txt sidecar — auto-remplit le titre)
+        </label>
         <input
-          type="text"
+          type="file"
+          accept=".txt,text/plain"
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            const text = await f.text();
+            setTitle(text.trim());
+          }}
+          className="w-full text-sm text-gray-600 dark:text-dark-muted"
+        />
+        <p className="text-[10px] text-gray-400 dark:text-dark-muted mt-1">
+          Sélectionne le fichier <code>.txt</code> du slot (ex. <code>evening.txt</code>) — la caption et les hashtags se chargent dans le titre, éditable juste en-dessous.
+        </p>
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
+          Titre / caption + hashtags
+          <span className="ml-2 text-gray-400">{title.length}/2200</span>
+        </label>
+        <textarea
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Titre de la vidéo..."
-          className="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg"
+          onChange={(e) => setTitle(e.target.value.slice(0, 2200))}
+          placeholder="Caption accrocheuse… #hashtag1 #hashtag2"
+          rows={4}
+          className="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg resize-y font-mono"
         />
       </div>
       <div>
