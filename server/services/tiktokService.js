@@ -17,9 +17,10 @@ const TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
 const USER_INFO_URL = 'https://open.tiktokapis.com/v2/user/info/';
 const VIDEO_LIST_URL = 'https://open.tiktokapis.com/v2/video/list/';
 const PUBLISH_INIT_URL = 'https://open.tiktokapis.com/v2/post/publish/video/init/';
+const PUBLISH_INBOX_URL = 'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/';
 const PUBLISH_STATUS_URL = 'https://open.tiktokapis.com/v2/post/publish/status/fetch/';
 
-const SCOPES = ['user.info.basic', 'user.info.stats', 'video.list', 'video.publish'];
+const SCOPES = ['user.info.basic', 'user.info.stats', 'video.list', 'video.publish', 'video.upload'];
 
 // --- Helpers credentials ----------------------------------------------------
 function requireTikTokEnv() {
@@ -296,6 +297,82 @@ async function publishVideo({ accessToken, videoBuffer, title, privacyLevel }) {
   return { publishId: publish_id, status };
 }
 
+/**
+ * Upload une vidéo dans les BROUILLONS TikTok du créateur (mode inbox).
+ *
+ * Différence avec publishVideo :
+ * - N'est PAS soumis à la restriction `unaudited_client_can_only_post_to_private_accounts`.
+ * - Pas de post_info : la vidéo arrive en draft dans l'app TikTok, le créateur
+ *   y ajoute caption / hashtags / son / privacy depuis son téléphone, puis publie.
+ * - Évite les exigences UX lourdes de Direct Post (privacy dropdown, music
+ *   confirmation, commercial content disclosure, etc.).
+ *
+ * Flow : init inbox → upload chunked (PUT) → poll status (terminal = SEND_TO_USER_INBOX).
+ * Requiert le scope `video.upload` (à ajouter aux SCOPES + reconnexion OAuth).
+ */
+async function uploadToInbox({ accessToken, videoBuffer }) {
+  if (!videoBuffer || !videoBuffer.length) {
+    throw new Error('Buffer video vide');
+  }
+  const videoSize = videoBuffer.length;
+  const chunkSize = videoSize <= 64 * 1024 * 1024 ? videoSize : CHUNK_SIZE;
+  const totalChunkCount = Math.ceil(videoSize / chunkSize);
+
+  // --- 1. INIT INBOX --------------------------------------------------------
+  const initBody = {
+    source_info: {
+      source: 'FILE_UPLOAD',
+      video_size: videoSize,
+      chunk_size: chunkSize,
+      total_chunk_count: totalChunkCount,
+    },
+  };
+  const initResp = await fetch(PUBLISH_INBOX_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: JSON.stringify(initBody),
+  });
+  const initData = await initResp.json();
+  if (!initResp.ok || !initData.error || initData.error.code !== 'ok') {
+    throw new Error(
+      `TikTok inbox init echoue (HTTP ${initResp.status}): ${JSON.stringify(initData)}`
+    );
+  }
+  if (!initData.data || !initData.data.upload_url) {
+    throw new Error(`TikTok inbox init: reponse inattendue: ${JSON.stringify(initData)}`);
+  }
+  const { publish_id, upload_url } = initData.data;
+
+  // --- 2. UPLOAD ------------------------------------------------------------
+  for (let i = 0; i < totalChunkCount; i++) {
+    const start = i * chunkSize;
+    const end = Math.min(start + chunkSize, videoSize) - 1;
+    const chunk = videoBuffer.subarray(start, end + 1);
+    const uploadResp = await fetch(upload_url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'video/mp4',
+        'Content-Length': String(chunk.length),
+        'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+      },
+      body: new Uint8Array(chunk),
+    });
+    if (!uploadResp.ok && uploadResp.status !== 201 && uploadResp.status !== 206) {
+      throw new Error(
+        `TikTok upload chunk ${i + 1}/${totalChunkCount} echoue: HTTP ${uploadResp.status}`
+      );
+    }
+  }
+
+  // --- 3. POLL STATUS -------------------------------------------------------
+  // Pour inbox, l'état terminal "OK" est SEND_TO_USER_INBOX (déjà géré dans pollPublishStatus).
+  const status = await pollPublishStatus(accessToken, publish_id);
+  return { publishId: publish_id, status };
+}
+
 module.exports = {
   getAuthUrl,
   exchangeCode,
@@ -303,4 +380,5 @@ module.exports = {
   fetchUserInfo,
   fetchVideoList,
   publishVideo,
+  uploadToInbox,
 };

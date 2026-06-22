@@ -350,6 +350,29 @@ function PublishForm({ niche, onError }) {
     }
   };
 
+  // Envoi en BROUILLON dans l'app TikTok du créateur. Pas de title/privacy ici :
+  // tu finalises depuis ton téléphone (caption, hashtags, son, audience). Pas de
+  // restriction unaudited_client. Recommandé pour la prod.
+  const submitDraft = async () => {
+    if (!file) return;
+    setPublishing(true);
+    setResult('');
+    onError('');
+    try {
+      const form = new FormData();
+      form.append('niche', niche);
+      form.append('video', file);
+      const res = await api.post('/tiktok/upload-draft', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setResult(`📤 Envoyé en draft : ${res.data.data.status} — finalise depuis ton app TikTok.`);
+    } catch (e) {
+      onError(e?.response?.data?.error || 'Echec de l\'envoi en draft');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className="mt-4 border-t border-gray-100 dark:border-dark-border pt-4 space-y-3">
       <div>
@@ -433,13 +456,24 @@ function PublishForm({ niche, onError }) {
           ))}
         </select>
       </div>
-      <button
-        onClick={submit}
-        disabled={publishing || !file}
-        className="px-4 py-1.5 text-sm font-medium bg-accent hover:bg-accent-hover text-dark-bg rounded-lg transition-colors disabled:opacity-50"
-      >
-        {publishing ? 'Publication en cours…' : 'Publier'}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={submitDraft}
+          disabled={publishing || !file}
+          className="px-4 py-1.5 text-sm font-medium bg-accent hover:bg-accent-hover text-dark-bg rounded-lg transition-colors disabled:opacity-50"
+          title="Envoie la vidéo dans tes brouillons TikTok — tu finalises caption/hashtags/audience depuis ton téléphone. Recommandé."
+        >
+          {publishing ? 'En cours…' : '📤 Envoyer en draft (recommandé)'}
+        </button>
+        <button
+          onClick={submit}
+          disabled={publishing || !file}
+          className="px-4 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg3 dark:hover:bg-dark-border text-gray-700 dark:text-dark-text rounded-lg transition-colors disabled:opacity-50"
+          title="Publication directe via Direct Post API — peut être bloquée par TikTok tant que le statut audit n'est pas propagé."
+        >
+          {publishing ? 'En cours…' : 'Publier direct (Direct Post)'}
+        </button>
+      </div>
       {result && (
         <div className="text-xs text-green-600 dark:text-accent">{result}</div>
       )}

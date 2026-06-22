@@ -136,6 +136,36 @@ exports.publish = asyncHandler(async (req, res) => {
   }
 });
 
+// POST /api/tiktok/upload-draft — multipart/form-data { niche, video (fichier) }
+// Upload en BROUILLON TikTok : pas de title/privacy ici, le créateur finalise
+// depuis l'app TikTok. Pas de restriction unaudited_client.
+exports.uploadDraft = asyncHandler(async (req, res) => {
+  const fs = require('fs');
+  const { niche } = req.body;
+  if (!niche) {
+    return res.status(400).json({ success: false, error: 'Niche manquante' });
+  }
+  if (!req.file || !req.file.path) {
+    return res.status(400).json({ success: false, error: 'Fichier video manquant' });
+  }
+  const account = await TikTokAccount.findOne({ niche });
+  if (!account) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(404).json({ success: false, error: 'Compte non connecte' });
+  }
+  try {
+    const videoBuffer = fs.readFileSync(req.file.path);
+    const token = await tiktokService.getValidToken(account);
+    const result = await tiktokService.uploadToInbox({
+      accessToken: token,
+      videoBuffer,
+    });
+    res.json({ success: true, data: result });
+  } finally {
+    fs.unlink(req.file.path, () => {});
+  }
+});
+
 // DELETE /api/tiktok/:niche — déconnecte (supprime) le compte
 exports.disconnect = asyncHandler(async (req, res) => {
   const account = await TikTokAccount.findOneAndDelete({ niche: req.params.niche });

@@ -7,6 +7,7 @@ const {
   getProfile,
   getVideos,
   publish,
+  uploadDraft,
   disconnect,
 } = require('../controllers/tiktokController');
 const { protect } = require('../middleware/auth');
@@ -27,6 +28,7 @@ router.post('/connect', protect, connectAccount);
 router.get('/profile/:niche', protect, getProfile);
 router.get('/videos/:niche', protect, getVideos);
 router.post('/publish', protect, upload.single('video'), publish);
+router.post('/upload-draft', protect, upload.single('video'), uploadDraft);
 router.delete('/:niche', protect, disconnect);
 
 module.exports = router;
