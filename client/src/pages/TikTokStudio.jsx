@@ -315,6 +315,18 @@ function PublishForm({ niche, onError }) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState('');
 
+  // Trie une liste de fichiers (issus d'un picker multi-select ou d'un drag&drop
+  // dossier) : .mp4 → setFile, .txt → setTitle. Tolérant : ignore les autres.
+  const applySlotFiles = async (files) => {
+    const mp4 = files.find((f) => f.name.toLowerCase().endsWith('.mp4'));
+    const txt = files.find((f) => f.name.toLowerCase().endsWith('.txt'));
+    if (mp4) setFile(mp4);
+    if (txt) {
+      const text = await txt.text();
+      setTitle(text.trim().slice(0, 2200));
+    }
+  };
+
   const submit = async () => {
     if (!file) return;
     setPublishing(true);
@@ -341,32 +353,58 @@ function PublishForm({ niche, onError }) {
   return (
     <div className="mt-4 border-t border-gray-100 dark:border-dark-border pt-4 space-y-3">
       <div>
-        <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">Fichier vidéo (mp4)</label>
-        <input
-          type="file"
-          accept="video/mp4"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="w-full text-sm text-gray-600 dark:text-dark-muted"
-        />
-      </div>
-      <div>
         <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
-          Légende + hashtags (.txt sidecar — auto-remplit le titre)
+          Fichiers du slot (.mp4 + .txt)
         </label>
-        <input
-          type="file"
-          accept=".txt,text/plain"
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            if (!f) return;
-            const text = await f.text();
-            setTitle(text.trim());
+        <div
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onDrop={async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const items = Array.from(e.dataTransfer.items || []);
+            const files = [];
+            for (const it of items) {
+              if (it.kind !== 'file') continue;
+              const entry = it.webkitGetAsEntry?.();
+              if (entry && entry.isDirectory) {
+                await new Promise((resolve) => {
+                  const reader = entry.createReader();
+                  reader.readEntries((entries) => {
+                    Promise.all(entries.map((ent) => new Promise((res) => {
+                      if (ent.isFile) ent.file((f) => { files.push(f); res(); });
+                      else res();
+                    }))).then(resolve);
+                  });
+                });
+              } else {
+                const f = it.getAsFile();
+                if (f) files.push(f);
+              }
+            }
+            await applySlotFiles(files);
           }}
-          className="w-full text-sm text-gray-600 dark:text-dark-muted"
-        />
-        <p className="text-[10px] text-gray-400 dark:text-dark-muted mt-1">
-          Sélectionne le fichier <code>.txt</code> du slot (ex. <code>evening.txt</code>) — la caption et les hashtags se chargent dans le titre, éditable juste en-dessous.
-        </p>
+          className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-lg p-3 hover:border-accent transition-colors"
+        >
+          <input
+            type="file"
+            multiple
+            accept="video/mp4,.txt,text/plain"
+            onChange={async (e) => {
+              const files = Array.from(e.target.files || []);
+              await applySlotFiles(files);
+            }}
+            className="w-full text-sm text-gray-600 dark:text-dark-muted"
+          />
+          <p className="text-[10px] text-gray-400 dark:text-dark-muted mt-2">
+            📂 <strong>Cmd+clic</strong> pour sélectionner le <code>.mp4</code> + le <code>.txt</code> en un coup, ou <strong>glisse-dépose</strong> le dossier du slot (ex. <code>2026-06-22/</code>) ici.
+          </p>
+          <p className="text-[11px] mt-2 min-h-[14px]">
+            {file && <span className="text-green-600 dark:text-accent">✓ {file.name}</span>}
+            {file && title && <span className="text-gray-400 mx-1">·</span>}
+            {title && <span className="text-green-600 dark:text-accent">✓ caption ({title.length} chars)</span>}
+          </p>
+        </div>
       </div>
       <div>
         <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
