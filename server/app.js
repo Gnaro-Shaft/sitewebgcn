@@ -43,6 +43,9 @@ app.use(
           "https://api.hyperliquid.xyz",
         ],
         imgSrc: ["'self'", "data:", "https:"],
+        // Autorise les Object URLs (URL.createObjectURL) dans les <video> :
+        // requis pour la preview de la vidéo dans /admin/tiktok.
+        mediaSrc: ["'self'", "blob:"],
       },
     },
   })
