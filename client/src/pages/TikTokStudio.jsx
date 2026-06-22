@@ -5,12 +5,15 @@ import api from '../api/axios';
 // Niches autorisées pour la connexion d'un compte TikTok
 const NICHES = ['business-ia', 'actu', 'aion', 'finance', 'motivation', 'productivite'];
 
-const PRIVACY_OPTIONS = [
-  { value: 'SELF_ONLY', label: 'Privé (moi seul)' },
-  { value: 'FOLLOWER_OF_CREATOR', label: 'Abonnés' },
-  { value: 'MUTUAL_FOLLOW_FRIENDS', label: 'Amis' },
-  { value: 'PUBLIC_TO_EVERYONE', label: 'Public' },
-];
+// Labels FR pour les codes privacy renvoyés par creator_info.privacy_level_options.
+// On NE garde PAS de liste statique : seules les options autorisées par TikTok
+// pour ce créateur précis sont affichées (conformité Content Sharing Guidelines).
+const PRIVACY_LABELS = {
+  SELF_ONLY: 'Privé (moi seul)',
+  FOLLOWER_OF_CREATOR: 'Abonnés',
+  MUTUAL_FOLLOW_FRIENDS: 'Amis',
+  PUBLIC_TO_EVERYONE: 'Public',
+};
 
 export default function TikTokStudio() {
   const [accounts, setAccounts] = useState([]);
@@ -308,15 +311,67 @@ function AccountCard({ account, onDisconnect }) {
 }
 
 // --- Formulaire de publication ---------------------------------------------
+// PublishForm — conforme aux Content Sharing Guidelines TikTok 2026 :
+// - Affiche creator_info (nickname/avatar) à chaque post
+// - Privacy dropdown SANS valeur par défaut (sélection manuelle obligatoire)
+// - Interaction settings (Comment/Duet/Stitch) non cochés par défaut, greyed
+//   si désactivés au niveau du compte
+// - Commercial Content Disclosure toggle (off par défaut)
+// - Distinction Brand Organic (« Ma marque ») vs Branded Content (« Contenu
+//   sponsorisé »), avec contrainte privacy ≠ SELF_ONLY pour Branded Content
+// - Music Usage Confirmation déclaration avant publish (consentement explicite)
+// - Preview vidéo avant publish
+// - Hashtags éditables dans le titre
 function PublishForm({ niche, onError }) {
+  // Fichiers + contenu
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState('');
-  const [privacy, setPrivacy] = useState('SELF_ONLY');
+  const [previewUrl, setPreviewUrl] = useState(null);
+
+  // Infos créateur (fetch à l'ouverture)
+  const [creatorInfo, setCreatorInfo] = useState(null);
+  const [creatorInfoError, setCreatorInfoError] = useState('');
+
+  // Privacy — pas de valeur par défaut (exigence TikTok UX)
+  const [privacy, setPrivacy] = useState('');
+
+  // Interaction settings — tous décochés par défaut. State = `allow*` (= ce que
+  // l'user veut autoriser). À l'envoi : disable_* = !allow_*.
+  const [allowComment, setAllowComment] = useState(false);
+  const [allowDuet, setAllowDuet] = useState(false);
+  const [allowStitch, setAllowStitch] = useState(false);
+
+  // Commercial content disclosure
+  const [commercialDisclosure, setCommercialDisclosure] = useState(false);
+  const [yourBrand, setYourBrand] = useState(false);
+  const [brandedContent, setBrandedContent] = useState(false);
+
+  // Consentement utilisateur explicite avant publish
+  const [consent, setConsent] = useState(false);
+
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState('');
 
-  // Trie une liste de fichiers (issus d'un picker multi-select ou d'un drag&drop
-  // dossier) : .mp4 → setFile, .txt → setTitle. Tolérant : ignore les autres.
+  // --- Fetch creator info quand la niche change ---
+  useEffect(() => {
+    if (!niche) return;
+    setCreatorInfo(null);
+    setCreatorInfoError('');
+    api
+      .get(`/tiktok/creator-info/${niche}`)
+      .then((res) => setCreatorInfo(res.data.data))
+      .catch((e) => setCreatorInfoError(e?.response?.data?.error || 'Erreur creator_info'));
+  }, [niche]);
+
+  // --- Video preview via Object URL ---
+  useEffect(() => {
+    if (!file) { setPreviewUrl(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  // --- File picker / drag-drop : .mp4 + .txt auto-chargés ---
   const applySlotFiles = async (files) => {
     const mp4 = files.find((f) => f.name.toLowerCase().endsWith('.mp4'));
     const txt = files.find((f) => f.name.toLowerCase().endsWith('.txt'));
@@ -327,17 +382,47 @@ function PublishForm({ niche, onError }) {
     }
   };
 
+  // --- Dérivés ---
+  const privacyOptions = (creatorInfo?.privacy_level_options || []).map((v) => ({
+    value: v,
+    label: PRIVACY_LABELS[v] || v,
+  }));
+  const commentDisabledAtAccount = creatorInfo?.comment_disabled || false;
+  const duetDisabledAtAccount = creatorInfo?.duet_disabled || false;
+  const stitchDisabledAtAccount = creatorInfo?.stitch_disabled || false;
+  const brandedContentForcesPublic = brandedContent && privacy === 'SELF_ONLY';
+  const commercialDiscloseValid = !commercialDisclosure || yourBrand || brandedContent;
+
+  // Texte de déclaration légale (Music Usage Confirmation, ou + Branded Content
+  // Policy selon les options sélectionnées) — exigence TikTok.
+  const declarationText =
+    commercialDisclosure && brandedContent
+      ? 'En postant, vous acceptez la Branded Content Policy et la Music Usage Confirmation de TikTok.'
+      : 'En postant, vous acceptez la Music Usage Confirmation de TikTok.';
+
+  const canPublish =
+    !!file &&
+    !!privacy &&
+    commercialDiscloseValid &&
+    !brandedContentForcesPublic &&
+    consent &&
+    !publishing;
+
   const submit = async () => {
-    if (!file) return;
+    if (!canPublish) return;
     setPublishing(true);
     setResult('');
     onError('');
     try {
-      // Upload en multipart/form-data — pas de base64, pas de limite JSON.
       const form = new FormData();
       form.append('niche', niche);
       form.append('title', title);
       form.append('privacyLevel', privacy);
+      form.append('disableComment', String(!allowComment));
+      form.append('disableDuet', String(!allowDuet));
+      form.append('disableStitch', String(!allowStitch));
+      form.append('brandContentToggle', String(brandedContent));
+      form.append('brandOrganicToggle', String(yourBrand));
       form.append('video', file);
       const res = await api.post('/tiktok/publish', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -350,31 +435,44 @@ function PublishForm({ niche, onError }) {
     }
   };
 
-  // Envoi en BROUILLON dans l'app TikTok du créateur. Pas de title/privacy ici :
-  // tu finalises depuis ton téléphone (caption, hashtags, son, audience). Pas de
-  // restriction unaudited_client. Recommandé pour la prod.
-  const submitDraft = async () => {
-    if (!file) return;
-    setPublishing(true);
-    setResult('');
-    onError('');
-    try {
-      const form = new FormData();
-      form.append('niche', niche);
-      form.append('video', file);
-      const res = await api.post('/tiktok/upload-draft', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setResult(`📤 Envoyé en draft : ${res.data.data.status} — finalise depuis ton app TikTok.`);
-    } catch (e) {
-      onError(e?.response?.data?.error || 'Echec de l\'envoi en draft');
-    } finally {
-      setPublishing(false);
-    }
-  };
-
   return (
     <div className="mt-4 border-t border-gray-100 dark:border-dark-border pt-4 space-y-3">
+      {/* Bannière créateur (creator_info) — affichage obligatoire à chaque post */}
+      {creatorInfo ? (
+        <div className="flex items-center gap-3 p-3 bg-accent/10 border border-accent/20 rounded-lg">
+          {creatorInfo.creator_avatar_url && (
+            <img
+              src={creatorInfo.creator_avatar_url}
+              alt=""
+              className="w-10 h-10 rounded-full"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium">
+              Publication vers{' '}
+              <span className="text-accent">
+                @{creatorInfo.creator_username || creatorInfo.creator_nickname}
+              </span>
+            </div>
+            <div className="text-[10px] text-gray-500 dark:text-dark-muted">
+              {creatorInfo.creator_nickname}
+              {creatorInfo.max_video_post_duration_sec
+                ? ` · durée max ${creatorInfo.max_video_post_duration_sec}s`
+                : ''}
+            </div>
+          </div>
+        </div>
+      ) : creatorInfoError ? (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg text-xs">
+          ⚠️ Impossible de charger les infos créateur : {creatorInfoError}
+        </div>
+      ) : (
+        <div className="p-3 bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg text-xs text-gray-500 dark:text-dark-muted">
+          Chargement des infos créateur…
+        </div>
+      )}
+
+      {/* File picker / drag-drop */}
       <div>
         <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
           Fichiers du slot (.mp4 + .txt)
@@ -420,7 +518,7 @@ function PublishForm({ niche, onError }) {
             className="w-full text-sm text-gray-600 dark:text-dark-muted"
           />
           <p className="text-[10px] text-gray-400 dark:text-dark-muted mt-2">
-            📂 <strong>Cmd+clic</strong> pour sélectionner le <code>.mp4</code> + le <code>.txt</code> en un coup, ou <strong>glisse-dépose</strong> le dossier du slot (ex. <code>2026-06-22/</code>) ici.
+            📂 <strong>Cmd+clic</strong> pour le <code>.mp4</code> + le <code>.txt</code>, ou <strong>glisse-dépose</strong> le dossier du slot ici.
           </p>
           <p className="text-[11px] mt-2 min-h-[14px]">
             {file && <span className="text-green-600 dark:text-accent">✓ {file.name}</span>}
@@ -429,6 +527,22 @@ function PublishForm({ niche, onError }) {
           </p>
         </div>
       </div>
+
+      {/* Preview vidéo (exigence TikTok : preview avant publish) */}
+      {previewUrl && (
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
+            Prévisualisation
+          </label>
+          <video
+            src={previewUrl}
+            controls
+            className="w-full max-w-[280px] rounded-lg border border-gray-200 dark:border-dark-border bg-black"
+          />
+        </div>
+      )}
+
+      {/* Titre + hashtags */}
       <div>
         <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
           Titre / caption + hashtags
@@ -442,38 +556,174 @@ function PublishForm({ niche, onError }) {
           className="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg resize-y font-mono"
         />
       </div>
+
+      {/* Privacy — PAS DE valeur par défaut (exigence TikTok) */}
       <div>
-        <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">Confidentialité</label>
+        <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
+          Qui peut voir cette publication ? <span className="text-red-500">*</span>
+        </label>
         <select
           value={privacy}
           onChange={(e) => setPrivacy(e.target.value)}
-          className="px-3 py-1.5 text-sm bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg"
+          disabled={!creatorInfo}
+          className="px-3 py-1.5 text-sm bg-gray-50 dark:bg-dark-bg3 border border-gray-200 dark:border-dark-border rounded-lg disabled:opacity-50 min-w-[200px]"
         >
-          {PRIVACY_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
+          <option value="">— Sélectionner une option —</option>
+          {privacyOptions.map((o) => (
+            <option
+              key={o.value}
+              value={o.value}
+              disabled={brandedContent && o.value === 'SELF_ONLY'}
+            >
               {o.label}
+              {brandedContent && o.value === 'SELF_ONLY'
+                ? ' (indisponible pour Branded Content)'
+                : ''}
             </option>
           ))}
         </select>
+        {brandedContentForcesPublic && (
+          <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+            ⚠️ La visibilité ne peut pas être privée pour un Branded Content. Choisis Public, Amis ou Abonnés.
+          </p>
+        )}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={submitDraft}
-          disabled={publishing || !file}
-          className="px-4 py-1.5 text-sm font-medium bg-accent hover:bg-accent-hover text-dark-bg rounded-lg transition-colors disabled:opacity-50"
-          title="Envoie la vidéo dans tes brouillons TikTok — tu finalises caption/hashtags/audience depuis ton téléphone. Recommandé."
-        >
-          {publishing ? 'En cours…' : '📤 Envoyer en draft (recommandé)'}
-        </button>
+
+      {/* Interaction settings — tous décochés par défaut, greyed si désactivés au compte */}
+      <div>
+        <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
+          Interactions autorisées
+        </label>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+          <label className={`flex items-center gap-1.5 ${commentDisabledAtAccount ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+            <input
+              type="checkbox"
+              checked={allowComment}
+              disabled={commentDisabledAtAccount}
+              onChange={(e) => setAllowComment(e.target.checked)}
+            />
+            Autoriser les commentaires
+          </label>
+          <label className={`flex items-center gap-1.5 ${duetDisabledAtAccount ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+            <input
+              type="checkbox"
+              checked={allowDuet}
+              disabled={duetDisabledAtAccount}
+              onChange={(e) => setAllowDuet(e.target.checked)}
+            />
+            Autoriser les Duets
+          </label>
+          <label className={`flex items-center gap-1.5 ${stitchDisabledAtAccount ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+            <input
+              type="checkbox"
+              checked={allowStitch}
+              disabled={stitchDisabledAtAccount}
+              onChange={(e) => setAllowStitch(e.target.checked)}
+            />
+            Autoriser les Stitch
+          </label>
+        </div>
+      </div>
+
+      {/* Commercial Content Disclosure */}
+      <div className="border border-gray-200 dark:border-dark-border rounded-lg p-3 space-y-2">
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={commercialDisclosure}
+            onChange={(e) => {
+              setCommercialDisclosure(e.target.checked);
+              if (!e.target.checked) {
+                setYourBrand(false);
+                setBrandedContent(false);
+              }
+            }}
+            className="mt-0.5"
+          />
+          <span className="text-sm font-medium">
+            Cette publication promeut une marque, un produit ou un service
+          </span>
+        </label>
+        {commercialDisclosure && (
+          <div className="pl-6 space-y-1.5 text-sm">
+            <label className="flex items-start gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={yourBrand}
+                onChange={(e) => setYourBrand(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                <strong>Ma marque</strong> — je fais la promo de moi-même ou de ma propre entreprise.
+                {yourBrand && (
+                  <span className="block text-[11px] text-gray-500 dark:text-dark-muted mt-0.5">
+                    Étiquetée « Promotional content » sur TikTok.
+                  </span>
+                )}
+              </span>
+            </label>
+            <label className="flex items-start gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={brandedContent}
+                onChange={(e) => setBrandedContent(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                <strong>Contenu sponsorisé</strong> — je fais la promo d'une autre marque ou d'un tiers.
+                {brandedContent && (
+                  <span className="block text-[11px] text-gray-500 dark:text-dark-muted mt-0.5">
+                    Étiquetée « Paid partnership ». Visibilité « privé » indisponible.
+                  </span>
+                )}
+              </span>
+            </label>
+            {!commercialDiscloseValid && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                ⚠️ Tu dois indiquer si le contenu promeut toi-même, un tiers, ou les deux.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Consentement explicite avant publish */}
+      <div className="border-l-2 border-accent pl-3 py-1">
+        <label className="flex items-start gap-2 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="mt-1"
+          />
+          <span>{declarationText}</span>
+        </label>
+      </div>
+
+      {/* Bouton publier */}
+      <div>
         <button
           onClick={submit}
-          disabled={publishing || !file}
-          className="px-4 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg3 dark:hover:bg-dark-border text-gray-700 dark:text-dark-text rounded-lg transition-colors disabled:opacity-50"
-          title="Publication directe via Direct Post API — peut être bloquée par TikTok tant que le statut audit n'est pas propagé."
+          disabled={!canPublish}
+          className="px-4 py-1.5 text-sm font-medium bg-accent hover:bg-accent-hover text-dark-bg rounded-lg transition-colors disabled:opacity-50"
         >
-          {publishing ? 'En cours…' : 'Publier direct (Direct Post)'}
+          {publishing ? 'Publication en cours…' : 'Publier sur TikTok'}
         </button>
+        {!canPublish && !publishing && file && (
+          <p className="text-[10px] text-gray-400 dark:text-dark-muted mt-1">
+            {!privacy
+              ? '→ choisis une visibilité'
+              : !commercialDiscloseValid
+              ? '→ indique le type de contenu commercial'
+              : brandedContentForcesPublic
+              ? '→ change la visibilité (Branded Content ≠ privé)'
+              : !consent
+              ? '→ accepte la déclaration TikTok'
+              : ''}
+          </p>
+        )}
       </div>
+
       {result && (
         <div className="text-xs text-green-600 dark:text-accent">{result}</div>
       )}

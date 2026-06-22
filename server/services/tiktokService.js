@@ -19,6 +19,7 @@ const VIDEO_LIST_URL = 'https://open.tiktokapis.com/v2/video/list/';
 const PUBLISH_INIT_URL = 'https://open.tiktokapis.com/v2/post/publish/video/init/';
 const PUBLISH_INBOX_URL = 'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/';
 const PUBLISH_STATUS_URL = 'https://open.tiktokapis.com/v2/post/publish/status/fetch/';
+const CREATOR_INFO_URL = 'https://open.tiktokapis.com/v2/post/publish/creator_info/query/';
 
 const SCOPES = ['user.info.basic', 'user.info.stats', 'video.list', 'video.publish', 'video.upload'];
 
@@ -220,13 +221,61 @@ async function pollPublishStatus(accessToken, publishId, maxAttempts = 30) {
 }
 
 /**
+ * Récupère les infos du créateur connecté pour pré-remplir l'UI de publish
+ * conformément aux Content Sharing Guidelines TikTok (creator_info doit être
+ * affiché à chaque post, et la durée vidéo + privacy options doivent être
+ * respectées selon ce que TikTok renvoie).
+ *
+ * Retourne notamment :
+ *  - creator_nickname / creator_username / creator_avatar_url
+ *  - privacy_level_options (liste autorisée pour ce créateur)
+ *  - comment/duet/stitch_disabled (interaction settings du créateur)
+ *  - max_video_post_duration_sec (limite vidéo selon le compte)
+ */
+async function fetchCreatorInfo(accessToken) {
+  const resp = await fetch(CREATOR_INFO_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: JSON.stringify({}),
+  });
+  const data = await resp.json();
+  if (!resp.ok || (data.error && data.error.code !== 'ok')) {
+    throw new Error(
+      `TikTok creator_info echoue: ${(data.error && data.error.code) || resp.status} — ${
+        (data.error && data.error.message) || ''
+      }`
+    );
+  }
+  return data.data || {};
+}
+
+/**
  * Publie une vidéo via la Content Posting API (méthode FILE_UPLOAD).
  * Flow : init → upload chunked (PUT) → poll status.
- * privacyLevel défaut 'SELF_ONLY' (obligatoire tant que l'app n'est pas auditée).
+ *
+ * Tous les paramètres post_info (privacy, interaction settings, brand content)
+ * doivent être explicitement passés par le client, conformément aux Content
+ * Sharing Guidelines TikTok (« Users must manually select… no default value »).
  */
-async function publishVideo({ accessToken, videoBuffer, title, privacyLevel }) {
+async function publishVideo({
+  accessToken,
+  videoBuffer,
+  title,
+  privacyLevel,
+  disableComment,
+  disableDuet,
+  disableStitch,
+  brandContentToggle,
+  brandOrganicToggle,
+}) {
   if (!videoBuffer || !videoBuffer.length) {
     throw new Error('Buffer video vide');
+  }
+  if (!privacyLevel) {
+    throw new Error('privacy_level requis (selection utilisateur explicite)');
   }
   const videoSize = videoBuffer.length;
 
@@ -238,10 +287,12 @@ async function publishVideo({ accessToken, videoBuffer, title, privacyLevel }) {
   const initBody = {
     post_info: {
       title: String(title || '').slice(0, 2200),
-      privacy_level: privacyLevel || 'SELF_ONLY',
-      disable_comment: false,
-      disable_duet: false,
-      disable_stitch: false,
+      privacy_level: privacyLevel,
+      disable_comment: !!disableComment,
+      disable_duet: !!disableDuet,
+      disable_stitch: !!disableStitch,
+      brand_content_toggle: !!brandContentToggle,
+      brand_organic_toggle: !!brandOrganicToggle,
     },
     source_info: {
       source: 'FILE_UPLOAD',
@@ -379,6 +430,7 @@ module.exports = {
   getValidToken,
   fetchUserInfo,
   fetchVideoList,
+  fetchCreatorInfo,
   publishVideo,
   uploadToInbox,
 };

@@ -6,6 +6,7 @@ const {
   connectAccount,
   getProfile,
   getVideos,
+  getCreatorInfo,
   publish,
   uploadDraft,
   disconnect,
@@ -27,6 +28,7 @@ router.get('/auth-url/:niche', protect, getAuthUrl);
 router.post('/connect', protect, connectAccount);
 router.get('/profile/:niche', protect, getProfile);
 router.get('/videos/:niche', protect, getVideos);
+router.get('/creator-info/:niche', protect, getCreatorInfo);
 router.post('/publish', protect, upload.single('video'), publish);
 router.post('/upload-draft', protect, upload.single('video'), uploadDraft);
 router.delete('/:niche', protect, disconnect);

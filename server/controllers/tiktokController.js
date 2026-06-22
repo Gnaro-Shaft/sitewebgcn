@@ -103,12 +103,41 @@ exports.getVideos = asyncHandler(async (req, res) => {
   res.json({ success: true, data: videos });
 });
 
-// POST /api/tiktok/publish — multipart/form-data { niche, title, privacyLevel, video (fichier) }
+// GET /api/tiktok/creator-info/:niche — infos du créateur pour pré-remplir l'UI
+// publish conformément aux Content Sharing Guidelines TikTok.
+exports.getCreatorInfo = asyncHandler(async (req, res) => {
+  const account = await TikTokAccount.findOne({ niche: req.params.niche });
+  if (!account) {
+    return res.status(404).json({ success: false, error: 'Compte non connecte' });
+  }
+  const token = await tiktokService.getValidToken(account);
+  const info = await tiktokService.fetchCreatorInfo(token);
+  res.json({ success: true, data: info });
+});
+
+// POST /api/tiktok/publish — multipart/form-data
+// Body: { niche, title, privacyLevel, disableComment, disableDuet, disableStitch,
+//         brandContentToggle, brandOrganicToggle, video (fichier) }
 exports.publish = asyncHandler(async (req, res) => {
   const fs = require('fs');
-  const { niche, title, privacyLevel } = req.body;
+  const {
+    niche,
+    title,
+    privacyLevel,
+    disableComment,
+    disableDuet,
+    disableStitch,
+    brandContentToggle,
+    brandOrganicToggle,
+  } = req.body;
   if (!niche) {
     return res.status(400).json({ success: false, error: 'Niche manquante' });
+  }
+  if (!privacyLevel) {
+    return res.status(400).json({
+      success: false,
+      error: 'privacy_level requis (selection utilisateur explicite)',
+    });
   }
   if (!req.file || !req.file.path) {
     return res.status(400).json({ success: false, error: 'Fichier video manquant' });
@@ -119,8 +148,10 @@ exports.publish = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Compte non connecte' });
   }
 
+  // Helper : 'true' / true → true, sinon false (formdata envoie tout en string)
+  const truthy = (v) => v === true || v === 'true' || v === 1 || v === '1';
+
   try {
-    // La vidéo est sur disque (multer diskStorage) — lue une fois, puis supprimée.
     const videoBuffer = fs.readFileSync(req.file.path);
     const token = await tiktokService.getValidToken(account);
     const result = await tiktokService.publishVideo({
@@ -128,10 +159,14 @@ exports.publish = asyncHandler(async (req, res) => {
       videoBuffer,
       title,
       privacyLevel,
+      disableComment: truthy(disableComment),
+      disableDuet: truthy(disableDuet),
+      disableStitch: truthy(disableStitch),
+      brandContentToggle: truthy(brandContentToggle),
+      brandOrganicToggle: truthy(brandOrganicToggle),
     });
     res.json({ success: true, data: result });
   } finally {
-    // Toujours nettoyer le fichier temporaire.
     fs.unlink(req.file.path, () => {});
   }
 });
