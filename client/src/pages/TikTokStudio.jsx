@@ -327,6 +327,7 @@ function PublishForm({ niche, onError }) {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState('');
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [videoDuration, setVideoDuration] = useState(null);
 
   // Infos créateur (fetch à l'ouverture)
   const [creatorInfo, setCreatorInfo] = useState(null);
@@ -365,9 +366,10 @@ function PublishForm({ niche, onError }) {
 
   // --- Video preview via Object URL ---
   useEffect(() => {
-    if (!file) { setPreviewUrl(null); return; }
+    if (!file) { setPreviewUrl(null); setVideoDuration(null); return; }
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+    setVideoDuration(null);
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
@@ -393,6 +395,11 @@ function PublishForm({ niche, onError }) {
   const brandedContentForcesPublic = brandedContent && privacy === 'SELF_ONLY';
   const commercialDiscloseValid = !commercialDisclosure || yourBrand || brandedContent;
 
+  // 1c — La vidéo doit respecter la durée max retournée par creator_info.
+  const maxDurationSec = creatorInfo?.max_video_post_duration_sec || null;
+  const videoTooLong =
+    !!videoDuration && !!maxDurationSec && videoDuration > maxDurationSec;
+
   // Texte de déclaration légale (Music Usage Confirmation, ou + Branded Content
   // Policy selon les options sélectionnées) — exigence TikTok.
   const declarationText =
@@ -405,8 +412,20 @@ function PublishForm({ niche, onError }) {
     !!privacy &&
     commercialDiscloseValid &&
     !brandedContentForcesPublic &&
+    !videoTooLong &&
     consent &&
     !publishing;
+
+  // Tooltip d'aide pour le bouton publish (exigence doc TikTok 3a : si commercial
+  // disclosure on et aucune option cochée, hover doit prompt l'utilisateur).
+  const publishHint =
+    commercialDisclosure && !yourBrand && !brandedContent
+      ? "You need to indicate if your content promotes yourself, a third party, or both."
+      : videoTooLong
+      ? `La vidéo dépasse la durée max autorisée pour ce compte (${maxDurationSec}s).`
+      : !consent
+      ? 'Coche la déclaration TikTok avant de publier.'
+      : '';
 
   const submit = async () => {
     if (!canPublish) return;
@@ -427,7 +446,12 @@ function PublishForm({ niche, onError }) {
       const res = await api.post('/tiktok/publish', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setResult(`Publication : ${res.data.data.status}`);
+      // 5d — Doc TikTok : prévenir l'utilisateur que la vidéo peut mettre
+      // quelques minutes à apparaître sur le profil après publication.
+      setResult(
+        `Publication : ${res.data.data.status}. ` +
+          'La vidéo peut prendre quelques minutes à apparaître sur le profil TikTok.'
+      );
     } catch (e) {
       onError(e?.response?.data?.error || 'Echec de la publication');
     } finally {
@@ -533,12 +557,24 @@ function PublishForm({ niche, onError }) {
         <div>
           <label className="block text-xs text-gray-500 dark:text-dark-muted mb-1">
             Prévisualisation
+            {videoDuration && (
+              <span className="ml-2 text-gray-400">
+                ({videoDuration.toFixed(1)}s
+                {maxDurationSec ? ` / max ${maxDurationSec}s` : ''})
+              </span>
+            )}
           </label>
           <video
             src={previewUrl}
             controls
+            onLoadedMetadata={(e) => setVideoDuration(e.currentTarget.duration)}
             className="w-full max-w-[280px] rounded-lg border border-gray-200 dark:border-dark-border bg-black"
           />
+          {videoTooLong && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+              ⚠️ Vidéo plus longue que la durée max ({maxDurationSec}s) autorisée par ce compte. Réduis la durée avant publication.
+            </p>
+          )}
         </div>
       )}
 
@@ -700,11 +736,12 @@ function PublishForm({ niche, onError }) {
         </label>
       </div>
 
-      {/* Bouton publier */}
+      {/* Bouton publier — title (hover tooltip) requis par exigence doc 3a */}
       <div>
         <button
           onClick={submit}
           disabled={!canPublish}
+          title={publishHint}
           className="px-4 py-1.5 text-sm font-medium bg-accent hover:bg-accent-hover text-dark-bg rounded-lg transition-colors disabled:opacity-50"
         >
           {publishing ? 'Publication en cours…' : 'Publier sur TikTok'}
@@ -717,6 +754,8 @@ function PublishForm({ niche, onError }) {
               ? '→ indique le type de contenu commercial'
               : brandedContentForcesPublic
               ? '→ change la visibilité (Branded Content ≠ privé)'
+              : videoTooLong
+              ? `→ vidéo trop longue (max ${maxDurationSec}s)`
               : !consent
               ? '→ accepte la déclaration TikTok'
               : ''}
