@@ -11,10 +11,13 @@ import PerformanceWidget from '../components/widgets/PerformanceWidget';
 import SignalsWidget from '../components/widgets/SignalsWidget';
 import BlogAIWidget from '../components/widgets/BlogAIWidget';
 import AnalyticsWidget from '../components/widgets/AnalyticsWidget';
+import BotStatusWidget from '../components/widgets/BotStatusWidget';
+import DecisionLogWidget from '../components/widgets/DecisionLogWidget';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
 
 const DEFAULT_WIDGETS = [
+  { id: 'botStatus', label: 'Bot Status', enabled: true },
   { id: 'crypto', label: 'Crypto Live', enabled: true },
   { id: 'github', label: 'GitHub Stats', enabled: true },
   { id: 'blog', label: 'Blog Stats', enabled: true },
@@ -23,9 +26,11 @@ const DEFAULT_WIDGETS = [
   { id: 'trades', label: 'Trades', enabled: true },
   { id: 'performance', label: 'Algo Performance', enabled: true },
   { id: 'signals', label: 'Signals', enabled: true },
+  { id: 'decisions', label: 'Decision Log', enabled: true },
 ];
 
 const WIDGET_COMPONENTS = {
+  botStatus: BotStatusWidget,
   crypto: CryptoWidget,
   github: GitHubStatsWidget,
   blog: BlogStatsWidget,
@@ -34,6 +39,7 @@ const WIDGET_COMPONENTS = {
   trades: TradesWidget,
   performance: PerformanceWidget,
   signals: SignalsWidget,
+  decisions: DecisionLogWidget,
 };
 
 export default function Dashboard() {

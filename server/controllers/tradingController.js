@@ -1,4 +1,7 @@
-const { getBotConnection } = require('../config/botDb');
+// Namespace import (not destructured) so vi.spyOn(botDb, 'getBotConnection')
+// in tests intercepts at call time instead of capturing at load time.
+const botDb = require('../config/botDb');
+const getBotConnection = () => botDb.getBotConnection();
 
 const HL_WALLET = process.env.HL_WALLET;
 
@@ -186,6 +189,51 @@ exports.getSignals = async (req, res) => {
   });
 };
 
+// Allowed values for the filters — anything else is silently ignored
+// (the alternative is 400 on every typo, which is more annoying than helpful).
+const ALLOWED_DECISION_STATUS = new Set(['accepted', 'refused']);
+const ALLOWED_DECISION_MOTIFS = new Set(['risk', 'circuit_breaker', 'correlation', 'exposure']);
+
+// GET /api/trading/decisions — recent decisions log written by the bot
+// (one doc per ±2 signal confirmed). Optional filters: ?status=, ?motif=, ?limit=.
+exports.getDecisions = async (req, res) => {
+  const conn = getBotConnection();
+  if (!conn) {
+    return res.status(503).json({ success: false, error: 'Bot database unavailable' });
+  }
+
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 100, 1), 500);
+  const filter = {};
+
+  if (req.query.status && ALLOWED_DECISION_STATUS.has(req.query.status)) {
+    filter.status = req.query.status;
+  }
+  if (req.query.motif && ALLOWED_DECISION_MOTIFS.has(req.query.motif)) {
+    filter.motif = req.query.motif;
+  }
+
+  // The bot stamps each decision with `created_at`. Fall back to `timestamp`
+  // for older docs that used the previous schema.
+  const decisions = await conn.collection('decisions')
+    .find(filter)
+    .sort({ created_at: -1, timestamp: -1 })
+    .limit(limit)
+    .toArray();
+
+  // Quick counts so the widget can show "23 accepted / 47 refused" at a glance.
+  const accepted = decisions.filter((d) => d.status === 'accepted').length;
+  const refused = decisions.length - accepted;
+
+  res.json({
+    success: true,
+    count: decisions.length,
+    data: decisions,
+    summary: { accepted, refused },
+  });
+};
+
 // Exposed for unit tests — pure functions, no DB/network
 exports._scoreToLevel = scoreToLevel;
 exports._resolveLevel = resolveLevel;
+exports._ALLOWED_DECISION_STATUS = ALLOWED_DECISION_STATUS;
+exports._ALLOWED_DECISION_MOTIFS = ALLOWED_DECISION_MOTIFS;
