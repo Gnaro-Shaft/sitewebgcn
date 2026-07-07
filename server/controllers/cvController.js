@@ -4,29 +4,17 @@ const CvData = require('../models/CvData');
 const { generateCV } = require('../services/PDFGenerator');
 const asyncHandler = require('../middleware/asyncHandler');
 
-// Date de bascule : 4 aout 2026
-const SWITCH_DATE = new Date('2026-08-04T00:00:00');
-
+// Single CV variant now that the portfolio is fully repositioned as
+// AI Engineer (Phase 23). The Technicien IT variant + SWITCH_DATE
+// bascule logic was removed — it's dead code after the pivot.
 const CV_FILES = {
-  technicien: {
-    fr: {
-      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_Technicien_IT_2025.pdf'),
-      filename: 'CV_Genaro_Nisus_Technicien_IT.pdf',
-    },
-    en: {
-      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_Technicien_IT_2025_EN.pdf'),
-      filename: 'CV_Genaro_Nisus_Technicien_IT_EN.pdf',
-    },
+  fr: {
+    path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_IA_ML_2025.pdf'),
+    filename: 'CV_Genaro_Nisus_IA_ML.pdf',
   },
-  ia: {
-    fr: {
-      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_Data_IA_2025.pdf'),
-      filename: 'CV_Genaro_Nisus_Data_IA.pdf',
-    },
-    en: {
-      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_Data_IA_2025_EN.pdf'),
-      filename: 'CV_Genaro_Nisus_Data_IA_EN.pdf',
-    },
+  en: {
+    path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_AI_ML_2025_EN.pdf'),
+    filename: 'CV_Genaro_Nisus_AI_ML_EN.pdf',
   },
 };
 
@@ -39,22 +27,22 @@ function normalizeLang(raw) {
   return short === 'en' ? 'en' : 'fr';
 }
 
-// Resolve the CV variant to serve, with an automatic fallback to FR if
-// the requested EN file isn't on disk. Rationale: the EN CV may not be
-// generated yet — better to serve the FR version with the correct filename
+// Resolve the CV to serve for the requested language, falling back to
+// the FR file if the requested EN file isn't on disk. Rationale: the EN
+// PDF might not be uploaded yet — better to serve FR with a clean filename
 // than to 404. Frontend is unaware of this fallback.
-async function resolveCvFile(variant, lang) {
-  const primary = variant[lang];
+async function resolveCvFile(lang) {
+  const primary = CV_FILES[lang];
   try {
     await fs.access(primary.path);
     return primary;
   } catch {
-    // Fallback to FR if EN isn't on disk. If we're already on FR and it's
-    // missing too, return primary anyway so caller 404s cleanly downstream.
+    // Fallback to FR if EN isn't on disk. If FR is missing too, return
+    // primary anyway so caller 404s cleanly downstream.
     if (lang === 'en') {
       try {
-        await fs.access(variant.fr.path);
-        return variant.fr;
+        await fs.access(CV_FILES.fr.path);
+        return CV_FILES.fr;
       } catch {
         return primary;
       }
@@ -63,13 +51,10 @@ async function resolveCvFile(variant, lang) {
   }
 }
 
-// GET /api/cv/download — public, serves the right CV based on date + ?lang
+// GET /api/cv/download — public, serves the right CV for ?lang=fr|en
 exports.downloadCV = asyncHandler(async (req, res) => {
-  const now = new Date();
-  const variant = now < SWITCH_DATE ? CV_FILES.technicien : CV_FILES.ia;
   const lang = normalizeLang(req.query.lang);
-
-  const cv = await resolveCvFile(variant, lang);
+  const cv = await resolveCvFile(lang);
 
   try {
     await fs.access(cv.path);
