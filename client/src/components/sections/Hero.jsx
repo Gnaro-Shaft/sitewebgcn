@@ -2,7 +2,9 @@ import { useTranslation } from 'react-i18next';
 import GlitchLogo from '../ui/GlitchLogo';
 
 export default function Hero() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // Backend accepts fr/en; anything else falls back to FR server-side.
+  const cvLang = i18n.language?.startsWith('en') ? 'en' : 'fr';
 
   return (
     <div className="relative text-center">
@@ -22,7 +24,7 @@ export default function Hero() {
         </p>
         <div className="mt-8 flex items-center justify-center gap-4 flex-wrap animate-fade-in-up stagger-3">
           <a
-            href="/api/cv/download"
+            href={`/api/cv/download?lang=${cvLang}`}
             className="px-6 py-3 bg-accent hover:bg-accent-hover text-dark-bg rounded-lg font-medium transition-all hover:shadow-[0_0_20px_rgba(0,255,136,0.3)]"
           >
             {t('hero.downloadCv')}
