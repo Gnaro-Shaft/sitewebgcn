@@ -2,24 +2,34 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 
+// AI category comes first — the site positions Genaro-Cedric as an
+// AI Engineer, so this order carries the narrative.
 const CATEGORY_KEYS = [
-  { key: 'frontend', titleKey: 'skills.groups.frontend' },
   { key: 'ai', titleKey: 'skills.groups.ai' },
+  { key: 'frontend', titleKey: 'skills.groups.frontend' },
   { key: 'backend', titleKey: 'skills.groups.backend' },
 ];
 
-// Fallback if API fails
+// Fallback if API fails. Mirrors the ai-forward ordering + the enriched
+// AI skill set added to the backend ALWAYS_INCLUDE list.
 const FALLBACK = {
+  ai: [
+    { name: 'Python', featured: true },
+    { name: 'RAG', featured: true },
+    { name: 'Embeddings (bge-m3)', featured: true },
+    { name: 'Qdrant', featured: true },
+    { name: 'scikit-learn', featured: true },
+    { name: 'Machine Learning', featured: true },
+    { name: 'MCP', featured: true },
+    { name: 'FastAPI', featured: true },
+    { name: 'Pandas', featured: true },
+    { name: 'LLM Integration', featured: true },
+  ],
   frontend: [
     { name: 'JavaScript', featured: true },
     { name: 'React', featured: true },
     { name: 'HTML / CSS', featured: false },
     { name: 'Tailwind CSS', featured: true },
-  ],
-  ai: [
-    { name: 'Python', featured: true },
-    { name: 'Pandas', featured: true },
-    { name: 'LLM Integration', featured: true },
   ],
   backend: [
     { name: 'Node.js', featured: true },

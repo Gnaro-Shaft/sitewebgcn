@@ -46,7 +46,7 @@ export default function Hero() {
             GitHub
           </a>
           <a
-            href="https://linkedin.com"
+            href="https://www.linkedin.com/in/gcnisus/"
             target="_blank"
             rel="noopener noreferrer"
             className="px-6 py-3 border border-gray-300 dark:border-dark-border rounded-lg font-medium text-gray-700 dark:text-dark-muted hover:border-accent hover:text-accent transition-all"

@@ -39,6 +39,11 @@ const DEP_MAP = {
   'pymongo[srv]': { name: 'PyMongo', category: 'ai', featured: false },
   websockets: { name: 'WebSockets', category: 'ai', featured: false },
   requests: { name: 'Requests', category: 'ai', featured: false },
+  'scikit-learn': { name: 'scikit-learn', category: 'ai', featured: true },
+  sklearn: { name: 'scikit-learn', category: 'ai', featured: true },
+  fastapi: { name: 'FastAPI', category: 'ai', featured: true },
+  'qdrant-client': { name: 'Qdrant', category: 'ai', featured: true },
+  qdrant: { name: 'Qdrant', category: 'ai', featured: true },
 };
 
 // Mapping: GitHub language → { display name, category }
@@ -52,7 +57,7 @@ const LANG_MAP = {
   Dockerfile: { name: 'Docker', category: 'backend', featured: false },
 };
 
-// Always include these (not detectable via GitHub)
+// Always include these (not detectable via GitHub, or too meta to autodetect)
 const ALWAYS_INCLUDE = [
   { name: 'Git / GitHub', category: 'backend', featured: false },
   { name: 'REST API', category: 'backend', featured: false },
@@ -61,7 +66,25 @@ const ALWAYS_INCLUDE = [
   { name: 'LLM Integration', category: 'ai', featured: true },
   { name: 'Automation', category: 'ai', featured: false },
   { name: 'Data Analysis', category: 'ai', featured: false },
+  // AI Engineer positioning — always show these even if the auto-detect
+  // pipeline (repo deps + languages) doesn't surface them. Featured=true
+  // for the ones central to the "Ingénieur IA" narrative.
+  { name: 'RAG', category: 'ai', featured: true },
+  { name: 'Embeddings (bge-m3)', category: 'ai', featured: true },
+  { name: 'Qdrant', category: 'ai', featured: true },
+  { name: 'scikit-learn', category: 'ai', featured: true },
+  { name: 'Machine Learning', category: 'ai', featured: true },
+  { name: 'MCP', category: 'ai', featured: true },
+  { name: 'FastAPI', category: 'ai', featured: true },
 ];
+
+// Invalidate the in-memory cache — new ALWAYS_INCLUDE entries must show
+// up on the next `/api/github/skills` call even if a cached response is
+// still in memory from before this deploy.
+exports._invalidateCache = () => {
+  skillsCache = null;
+  skillsCacheTime = 0;
+};
 
 async function fetchJSON(url) {
   try {
