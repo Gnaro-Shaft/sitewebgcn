@@ -1,10 +1,15 @@
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../context/ThemeContext';
 import GlitchLogo from '../ui/GlitchLogo';
 
 export default function Hero() {
   const { t, i18n } = useTranslation();
+  // theme = resolved 'light' | 'dark' (already reflects mode='auto' → OS)
+  const { theme } = useTheme();
   // Backend accepts fr/en; anything else falls back to FR server-side.
   const cvLang = i18n.language?.startsWith('en') ? 'en' : 'fr';
+  // Defensive: anything not clearly 'dark' → 'light' (matches backend contract)
+  const cvTheme = theme === 'dark' ? 'dark' : 'light';
 
   return (
     <div className="relative text-center">
@@ -24,7 +29,7 @@ export default function Hero() {
         </p>
         <div className="mt-8 flex items-center justify-center gap-4 flex-wrap animate-fade-in-up stagger-3">
           <a
-            href={`/api/cv/download?lang=${cvLang}`}
+            href={`/api/cv/download?lang=${cvLang}&theme=${cvTheme}`}
             className="px-6 py-3 bg-accent hover:bg-accent-hover text-dark-bg rounded-lg font-medium transition-all hover:shadow-[0_0_20px_rgba(0,255,136,0.3)]"
           >
             {t('hero.downloadCv')}

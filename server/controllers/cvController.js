@@ -4,17 +4,31 @@ const CvData = require('../models/CvData');
 const { generateCV } = require('../services/PDFGenerator');
 const asyncHandler = require('../middleware/asyncHandler');
 
-// Single CV variant now that the portfolio is fully repositioned as
-// AI Engineer (Phase 23). The Technicien IT variant + SWITCH_DATE
-// bascule logic was removed — it's dead code after the pivot.
+// Two-axis matrix: language × visual theme. The theme axis was added so
+// visitors get a CV that matches whichever theme they're browsing in
+// (Phase 23 addendum). Filenames handed to the recruiter are stripped of
+// the _clair/_light/_dark suffixes — those are storage details, not
+// something a hiring manager should see.
 const CV_FILES = {
   fr: {
-    path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_IA_ML_2025.pdf'),
-    filename: 'CV_Genaro_Nisus_IA_ML.pdf',
+    light: {
+      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_IA_ML_2025_clair.pdf'),
+      filename: 'CV_Genaro_Nisus_Ingenieur_IA_ML.pdf',
+    },
+    dark: {
+      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_IA_ML_2025.pdf'),
+      filename: 'CV_Genaro_Nisus_Ingenieur_IA_ML.pdf',
+    },
   },
   en: {
-    path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_AI_ML_2025_EN.pdf'),
-    filename: 'CV_Genaro_Nisus_AI_ML_EN.pdf',
+    light: {
+      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_AI_ML_2025_EN_light.pdf'),
+      filename: 'CV_Genaro_Nisus_AI_ML_Engineer.pdf',
+    },
+    dark: {
+      path: path.join(__dirname, '../public/cv/CV_Genaro_Nisus_AI_ML_2025_EN.pdf'),
+      filename: 'CV_Genaro_Nisus_AI_ML_Engineer.pdf',
+    },
   },
 };
 
@@ -27,54 +41,60 @@ function normalizeLang(raw) {
   return short === 'en' ? 'en' : 'fr';
 }
 
-// Resolve the CV to serve for the requested language, falling back to
-// the FR file if the requested EN file isn't on disk. Rationale: the EN
-// PDF might not be uploaded yet — better to serve FR with a clean filename
-// than to 404. Frontend is unaware of this fallback.
-async function resolveCvFile(lang) {
-  const primary = CV_FILES[lang];
-  try {
-    await fs.access(primary.path);
-    return primary;
-  } catch {
-    // Fallback to FR if EN isn't on disk. If FR is missing too, return
-    // primary anyway so caller 404s cleanly downstream.
-    if (lang === 'en') {
-      try {
-        await fs.access(CV_FILES.fr.path);
-        return CV_FILES.fr;
-      } catch {
-        return primary;
-      }
-    }
-    return primary;
-  }
+// Default theme is 'light'. Rationale: a raw link (no ?theme=) — shared
+// on LinkedIn, sitting in an ATS, dropped in an email — hits the light
+// version, which is the safer/more universal look for print + PDF readers
+// that ignore embedded CSS. Anything not explicitly 'dark' → 'light'.
+function normalizeTheme(raw) {
+  if (typeof raw !== 'string') return 'light';
+  return raw.toLowerCase() === 'dark' ? 'dark' : 'light';
 }
 
-// GET /api/cv/download — public, serves the right CV for ?lang=fr|en
+// Resolve with two layers of fallback so we never 404 on a real request
+// when at least one file exists:
+//   1. Requested theme is missing on disk → same lang, light theme
+//   2. Requested lang is missing entirely → FR light (final safety net)
+// Returns null only if literally everything is missing — caller 404s.
+async function resolveCvFile(lang, theme) {
+  const primary = CV_FILES[lang]?.[theme];
+  if (primary) {
+    try { await fs.access(primary.path); return primary; } catch {}
+  }
+  if (theme !== 'light') {
+    const lightFallback = CV_FILES[lang]?.light;
+    if (lightFallback) {
+      try { await fs.access(lightFallback.path); return lightFallback; } catch {}
+    }
+  }
+  if (lang !== 'fr') {
+    const frLight = CV_FILES.fr.light;
+    try { await fs.access(frLight.path); return frLight; } catch {}
+  }
+  return null;
+}
+
+// GET /api/cv/download — public
+// Query params (both optional):
+//   ?lang=fr|en    default 'fr'
+//   ?theme=light|dark  default 'light'
 exports.downloadCV = asyncHandler(async (req, res) => {
   const lang = normalizeLang(req.query.lang);
-  const cv = await resolveCvFile(lang);
+  const theme = normalizeTheme(req.query.theme);
 
-  try {
-    await fs.access(cv.path);
-  } catch {
+  const cv = await resolveCvFile(lang, theme);
+  if (!cv) {
     return res.status(404).json({ success: false, error: 'CV file not found' });
   }
 
-  const pdfBuffer = await fs.readFile(cv.path);
-
-  res.set({
-    'Content-Type': 'application/pdf',
-    'Content-Disposition': `attachment; filename="${cv.filename}"`,
-    'Content-Length': pdfBuffer.length,
-  });
-
-  res.send(pdfBuffer);
+  // res.download() sets Content-Type: application/pdf (via extension) and
+  // Content-Disposition: attachment; filename="…". The `filename` we pass
+  // is the recruiter-facing name — no _clair/_light/_dark suffix leaks.
+  res.download(cv.path, cv.filename);
 });
 
 // Exposed for potential unit tests — pure functions, no DB/network.
 exports._normalizeLang = normalizeLang;
+exports._normalizeTheme = normalizeTheme;
 
 // GET /api/cv/data — admin, get raw CV data
 exports.getCvData = asyncHandler(async (req, res) => {
