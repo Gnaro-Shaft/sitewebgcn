@@ -32,9 +32,36 @@ const articleSchema = new mongoose.Schema(
     publishedAt: {
       type: Date,
     },
+    // Per-platform status of the LinkedIn/X publication queue. Status values:
+    //   'pending'  — never queued (default, article is only on the blog)
+    //   'queued'   — publish clicked, waiting for n8n to poll and post
+    //   'posted'   — successfully posted, postUrn stored for backref
+    //   'failed'   — n8n reported failure with error message
+    // The old boolean flag has been migrated to `status === 'posted'` reads.
     socialPosted: {
-      x: { type: Boolean, default: false },
-      linkedin: { type: Boolean, default: false },
+      linkedin: {
+        status: {
+          type: String,
+          enum: ['pending', 'queued', 'posted', 'failed'],
+          default: 'pending',
+        },
+        queuedAt: Date,
+        postedAt: Date,
+        postUrn: String,      // URN LinkedIn du post (renvoyé par leur API)
+        commentUrn: String,   // URN du firstComment
+        error: String,        // message si status='failed'
+      },
+      x: {
+        status: {
+          type: String,
+          enum: ['pending', 'queued', 'posted', 'failed'],
+          default: 'pending',
+        },
+        queuedAt: Date,
+        postedAt: Date,
+        postUrn: String,
+        error: String,
+      },
     },
     views: {
       type: Number,

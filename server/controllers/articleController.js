@@ -1,8 +1,24 @@
 const Article = require('../models/Article');
 const asyncHandler = require('../middleware/asyncHandler');
-// Namespace import (not destructured) so vi.spyOn() in tests can replace
-// publishToAll at runtime. Destructured imports capture at load time.
-const SocialPublisher = require('../services/SocialPublisher');
+
+// Helper: mark the LinkedIn + X status for an article and return a diff of
+// what changed. Callers save the article themselves. Deliberately keeps
+// state changes explicit so the controller reads linearly.
+function enqueueSocialPost(article) {
+  const now = new Date();
+  article.socialPosted = article.socialPosted || {};
+  ['linkedin', 'x'].forEach((platform) => {
+    const current = article.socialPosted[platform] || {};
+    // Only queue if not already queued/posted — no double-queueing.
+    if (current.status === 'posted') return;
+    article.socialPosted[platform] = {
+      ...(current.toObject?.() || current),
+      status: 'queued',
+      queuedAt: now,
+      error: undefined,
+    };
+  });
+}
 
 // Approx 200 wpm reading rate. Math.max(1, …) avoids "0 min" for very
 // short articles (a 1-word teaser still shows "1 min").
@@ -105,37 +121,29 @@ exports.publishArticle = asyncHandler(async (req, res) => {
   const wasPublished = article.published;
   article.published = !article.published;
   article.publishedAt = article.published ? new Date() : null;
-  await article.save();
 
-  // Trigger social publish on FIRST publication only (not republish)
-  let socialResults = null;
+  // Enqueue for social posting on FIRST publication only (not republish,
+  // not unpublish). n8n on homeserv01 polls /api/social/pending every ~5 min
+  // and takes over from there.
   const isFirstPublish = article.published && !wasPublished &&
-    !article.socialPosted?.linkedin && !article.socialPosted?.x;
+    article.socialPosted?.linkedin?.status !== 'posted' &&
+    article.socialPosted?.x?.status !== 'posted';
 
+  let socialResults = null;
   if (isFirstPublish) {
-    // Fire-and-forget: don't block the response on social posting
-    SocialPublisher.publishToAll(article)
-      .then(async (results) => {
-        // Update socialPosted flags after webhooks return
-        article.socialPosted = {
-          linkedin: !!results.linkedin?.success,
-          x: !!results.x?.success,
-        };
-        await article.save();
-        console.log(`Social publish for "${article.title}":`, {
-          linkedin: results.linkedin?.success ? 'OK' : (results.linkedin?.skipped ? 'skipped' : 'FAIL'),
-          x: results.x?.success ? 'OK' : (results.x?.skipped ? 'skipped' : 'FAIL'),
-        });
-      })
-      .catch((err) => console.error('Social publish error:', err));
-
-    socialResults = { triggered: true };
+    enqueueSocialPost(article);
+    socialResults = { queued: true };
   }
 
+  await article.save();
   res.json({ success: true, data: article, social: socialResults });
 });
 
-// POST /api/articles/:id/social-publish — admin, manually trigger social post
+// POST /api/articles/:id/social-publish — admin, re-queue for social posting.
+// Used by the admin UI's "Push to LinkedIn" button (also re-triggers failed
+// articles). Flips status back to 'queued' regardless of previous state
+// (except 'posted' — that stays 'posted' unless we explicitly want to re-post,
+// which we don't right now).
 exports.triggerSocialPublish = asyncHandler(async (req, res) => {
   const article = await Article.findById(req.params.id);
 
@@ -147,16 +155,19 @@ exports.triggerSocialPublish = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Article must be published first' });
   }
 
-  const results = await SocialPublisher.publishToAll(article);
-
-  // Update flags
-  article.socialPosted = {
-    linkedin: !!results.linkedin?.success || article.socialPosted?.linkedin,
-    x: !!results.x?.success || article.socialPosted?.x,
-  };
+  enqueueSocialPost(article);
   await article.save();
 
-  res.json({ success: true, data: { article, results } });
+  res.json({
+    success: true,
+    data: {
+      article,
+      queued: {
+        linkedin: article.socialPosted?.linkedin?.status,
+        x: article.socialPosted?.x?.status,
+      },
+    },
+  });
 });
 
 // DELETE /api/articles/:id — admin

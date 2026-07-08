@@ -1,29 +1,18 @@
 // Integration test — article lifecycle from creation to publish.
-// We mock the SocialPublisher webhook only — everything else is real
-// (Express, Mongoose, validation, JWT, asyncHandler).
+// The social publish flow is queue-based (Phase 24): publishArticle sets
+// socialPosted.linkedin.status='queued' and n8n picks up asynchronously.
+// We assert the DB queue state instead of spying on a webhook call.
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 
 const { app, startServer, stopServer, cleanCollections } = require('./setup');
 
-// Don't actually hit Make.com during tests. Replace the webhook fn so we
-// can assert it was called, with what payload.
-const SocialPublisher = require('../../services/SocialPublisher');
-const publishToAllSpy = vi.spyOn(SocialPublisher, 'publishToAll').mockResolvedValue({
-  linkedin: { success: true },
-  x: { success: false, skipped: true },
-});
-
 beforeAll(startServer, 30_000);
 afterAll(stopServer);
-beforeEach(async () => {
-  publishToAllSpy.mockClear();
-  await cleanCollections();
-});
+beforeEach(cleanCollections);
 
 async function registerAdmin() {
-  // Register a user, then promote to admin in DB (no public route does this).
   const reg = await request(app)
     .post('/api/auth/register')
     .send({ email: 'admin@example.com', password: 'adminpassword' });
@@ -34,12 +23,11 @@ async function registerAdmin() {
     { $set: { role: 'admin' } }
   );
 
-  // Re-login to get a fresh token reflecting the new role
   const login = await request(app)
     .post('/api/auth/login')
     .send({ email: 'admin@example.com', password: 'adminpassword' });
 
-  return { token: login.body.token, userId: login.body.user.id };
+  return { token: login.body.accessToken || login.body.token, userId: login.body.user.id };
 }
 
 describe('Article publish flow', () => {
@@ -74,17 +62,17 @@ describe('Article publish flow', () => {
     expect(adminList.status).toBe(200);
     expect(adminList.body.data).toHaveLength(1);
 
-    // 4. Publish triggers the social webhook on the FIRST publish
+    // 4. Publish flips the LinkedIn+X status to 'queued'
     const publish = await request(app)
       .patch(`/api/articles/${articleId}/publish`)
       .set('Authorization', `Bearer ${token}`);
     expect(publish.status).toBe(200);
     expect(publish.body.data.published).toBe(true);
     expect(publish.body.data.publishedAt).toBeTruthy();
-    // Webhook is fire-and-forget; give it a tick
-    await new Promise((r) => setImmediate(r));
-    expect(publishToAllSpy).toHaveBeenCalledTimes(1);
-    expect(publishToAllSpy.mock.calls[0][0].title).toBe('My first draft');
+    expect(publish.body.social).toEqual({ queued: true });
+    expect(publish.body.data.socialPosted.linkedin.status).toBe('queued');
+    expect(publish.body.data.socialPosted.linkedin.queuedAt).toBeTruthy();
+    expect(publish.body.data.socialPosted.x.status).toBe('queued');
 
     // 5. Now appears on the public list, with content
     const publicListAfter = await request(app).get('/api/articles');
@@ -99,13 +87,11 @@ describe('Article publish flow', () => {
   });
 
   it('non-admin cannot create or publish articles', async () => {
-    // Register a regular user
     const reg = await request(app)
       .post('/api/auth/register')
       .send({ email: 'user@example.com', password: 'userpassword' });
-    const userToken = reg.body.token;
+    const userToken = reg.body.accessToken || reg.body.token;
 
-    // Try to create
     const create = await request(app)
       .post('/api/articles')
       .set('Authorization', `Bearer ${userToken}`)
@@ -120,7 +106,7 @@ describe('Article publish flow', () => {
     expect(res.status).toBe(401);
   });
 
-  it('republishing does NOT re-fire the social webhook (avoids LinkedIn duplicate)', async () => {
+  it('republishing does NOT re-queue when already posted (avoids LinkedIn duplicate)', async () => {
     const { token } = await registerAdmin();
 
     const created = await request(app)
@@ -129,30 +115,36 @@ describe('Article publish flow', () => {
       .send({ title: 'No double post', content: 'content' });
     const id = created.body.data._id;
 
-    // First publish — webhook fires
-    await request(app)
+    // First publish — queues both platforms
+    const firstPublish = await request(app)
       .patch(`/api/articles/${id}/publish`)
       .set('Authorization', `Bearer ${token}`);
-    await new Promise((r) => setImmediate(r));
-    expect(publishToAllSpy).toHaveBeenCalledTimes(1);
+    expect(firstPublish.body.social).toEqual({ queued: true });
 
-    // Mark socialPosted.linkedin in DB so the next publish recognizes it
-    // (the controller checks socialPosted.linkedin/x to decide if first-publish)
+    // Simulate n8n picking up the article and marking it as posted.
     const Article = require('../../models/Article');
     await Article.updateOne(
       { _id: id },
-      { $set: { 'socialPosted.linkedin': true } }
+      {
+        $set: {
+          'socialPosted.linkedin.status': 'posted',
+          'socialPosted.linkedin.postedAt': new Date(),
+          'socialPosted.linkedin.postUrn': 'urn:li:share:fake',
+        },
+      }
     );
 
-    // Unpublish then republish — should NOT call webhook again
+    // Unpublish then republish — should NOT re-queue (LinkedIn already has it)
     await request(app)
       .patch(`/api/articles/${id}/publish`)
-      .set('Authorization', `Bearer ${token}`); // toggles to unpublished
-    await request(app)
+      .set('Authorization', `Bearer ${token}`); // unpublish
+    const republish = await request(app)
       .patch(`/api/articles/${id}/publish`)
-      .set('Authorization', `Bearer ${token}`); // toggles back to published
+      .set('Authorization', `Bearer ${token}`); // republish
 
-    await new Promise((r) => setImmediate(r));
-    expect(publishToAllSpy).toHaveBeenCalledTimes(1); // still 1, not 2
+    expect(republish.body.social).toBeNull();
+    // LinkedIn status is preserved as 'posted' (not overwritten back to 'queued')
+    expect(republish.body.data.socialPosted.linkedin.status).toBe('posted');
+    expect(republish.body.data.socialPosted.linkedin.postUrn).toBe('urn:li:share:fake');
   });
 });
