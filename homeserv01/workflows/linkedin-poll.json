@@ -50,7 +50,6 @@
         "conditions": {
           "options": {
             "caseSensitive": true,
-            "leftValue": "",
             "typeValidation": "loose"
           },
           "conditions": [
@@ -75,17 +74,6 @@
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "id": "split-batches",
-      "name": "One item at a time",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [880, 240]
-    },
-    {
-      "parameters": {
         "fieldToSplitOut": "data",
         "options": {}
       },
@@ -93,21 +81,51 @@
       "name": "Extract items",
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [880, 100]
+      "position": [880, 300]
     },
     {
       "parameters": {
-        "text": "={{ $json.text }}",
-        "additionalFields": {}
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "One item at a time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"author\": \"urn:li:person:uriMsvVEaZ\",\n  \"lifecycleState\": \"PUBLISHED\",\n  \"specificContent\": {\n    \"com.linkedin.ugc.ShareContent\": {\n      \"shareCommentary\": {\n        \"text\": {{ JSON.stringify($json.text) }}\n      },\n      \"shareMediaCategory\": \"NONE\"\n    }\n  },\n  \"visibility\": {\n    \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n  }\n}",
+        "options": {}
       },
       "id": "linkedin-post",
       "name": "LinkedIn: Create Post",
-      "type": "n8n-nodes-base.linkedIn",
-      "typeVersion": 1,
-      "position": [1100, 240],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 240],
       "credentials": {
-        "linkedInOAuth2Api": {
-          "name": "LinkedIn OAuth2"
+        "httpHeaderAuth": {
+          "name": "LinkedIn Bearer"
         }
       }
     },
@@ -115,21 +133,34 @@
       "parameters": {
         "method": "POST",
         "url": "=https://api.linkedin.com/v2/socialActions/{{ encodeURIComponent($json.id) }}/comments",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "linkedInOAuth2Api",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"actor\": \"{{ $json.author }}\",\n  \"message\": {\n    \"text\": {{ JSON.stringify($node[\"One item at a time\"].json.firstComment) }}\n  }\n}",
+        "jsonBody": "={\n  \"actor\": \"urn:li:person:uriMsvVEaZ\",\n  \"object\": {{ JSON.stringify($node[\"LinkedIn: Create Post\"].json.id) }},\n  \"message\": {\n    \"text\": {{ JSON.stringify($node[\"One item at a time\"].json.firstComment) }}\n  }\n}",
         "options": {}
       },
       "id": "linkedin-comment",
       "name": "LinkedIn: Comment on Post",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 240],
+      "position": [1540, 240],
       "credentials": {
-        "linkedInOAuth2Api": {
-          "name": "LinkedIn OAuth2"
+        "httpHeaderAuth": {
+          "name": "LinkedIn Bearer"
         }
       }
     },
@@ -139,38 +170,25 @@
         "url": "https://gcn-data.fr/api/social/mark-posted",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"articleId\": {{ JSON.stringify($node[\"One item at a time\"].json.articleId) }},\n  \"platform\": \"linkedin\",\n  \"postUrn\": {{ JSON.stringify($node[\"LinkedIn: Create Post\"].json.id) }},\n  \"commentUrn\": {{ JSON.stringify($node[\"LinkedIn: Comment on Post\"].json.id) }}\n}",
+        "jsonBody": "={\n  \"articleId\": {{ JSON.stringify($node[\"One item at a time\"].json.articleId) }},\n  \"platform\": \"linkedin\",\n  \"postUrn\": {{ JSON.stringify($node[\"LinkedIn: Create Post\"].json.id) }},\n  \"commentUrn\": {{ JSON.stringify($node[\"LinkedIn: Comment on Post\"].json.id || '') }}\n}",
         "options": {}
       },
       "id": "http-mark-posted",
       "name": "Mark posted on Fly",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 240],
-      "credentials": {
-        "httpHeaderAuth": {
-          "name": "Fly n8n secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://gcn-data.fr/api/social/mark-failed",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"articleId\": {{ JSON.stringify($node[\"One item at a time\"].json.articleId) }},\n  \"platform\": \"linkedin\",\n  \"error\": {{ JSON.stringify($json.error?.message || $json.message || 'Unknown n8n workflow error') }}\n}",
-        "options": {}
-      },
-      "id": "http-mark-failed",
-      "name": "Mark failed on Fly",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1540, 420],
+      "position": [1760, 240],
       "credentials": {
         "httpHeaderAuth": {
           "name": "Fly n8n secret"
@@ -271,11 +289,10 @@
     }
   },
   "settings": {
-    "executionOrder": "v1",
-    "errorWorkflow": ""
+    "executionOrder": "v1"
   },
   "meta": {
-    "instanceId": "gcn-data-linkedin-poll-v1"
+    "instanceId": "gcn-data-linkedin-poll-v2-headerauth"
   },
   "tags": []
 }
