@@ -1,0 +1,52 @@
+# n8n stack for homeserv01 — Tailscale-only access
+#
+# Design decisions:
+#   - Bind port 5678 to 127.0.0.1 only, NOT 0.0.0.0. n8n is exposed to
+#     Tailscale via `tailscale serve` (see README), which proxies HTTPS
+#     from a *.ts.net hostname to localhost:5678. This is defense in
+#     depth — even a compromised container on the same host cannot reach
+#     n8n directly.
+#   - Encryption key is passed via env, NOT auto-generated. If n8n
+#     auto-generates it into ./n8n_data, wiping that folder wipes the key
+#     and all stored credentials become unreadable. Explicit key = you
+#     back it up separately.
+#   - Basic auth is a second layer on top of Tailscale ACLs. Overkill in
+#     a solo tailnet, but zero-cost defense against a misconfigured share.
+#   - No PostgreSQL — n8n's default SQLite is enough for a solo use case
+#     with a handful of workflows. Simpler backup story.
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      # Timezone — affects Schedule Trigger node scheduling + timestamps
+      GENERIC_TIMEZONE: Europe/Paris
+      TZ: Europe/Paris
+
+      # Encryption key for credentials at rest (MUST be stable, back this up)
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+
+      # Basic auth on the UI
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+
+      # Public-facing URL — used by n8n to build OAuth callback URLs
+      # (LinkedIn will redirect here after the OAuth dance). Must match
+      # the URL you register in the LinkedIn Developer app.
+      WEBHOOK_URL: https://${N8N_HOSTNAME}/
+      N8N_HOST: ${N8N_HOSTNAME}
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: https
+
+      # Suppress the "enforce settings file permissions" prompt in a
+      # single-user container context. Harmless in this setup.
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "false"
+    volumes:
+      # ./n8n_data holds: SQLite DB, workflows, credentials (encrypted),
+      # execution history. Back this up regularly (nightly rsync is fine).
+      - ./n8n_data:/home/node/.n8n

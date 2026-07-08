@@ -1,0 +1,281 @@
+{
+  "name": "LinkedIn Auto-Post — poll gcn-data.fr",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://gcn-data.fr/api/social/pending",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "platform",
+              "value": "linkedin"
+            }
+          ]
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "http-get-pending",
+      "name": "GET pending articles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fly n8n secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-items",
+      "name": "If any pending",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "One item at a time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [880, 240]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "extract-items",
+      "name": "Extract items",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "linkedin-post",
+      "name": "LinkedIn: Create Post",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [1100, 240],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "name": "LinkedIn OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.linkedin.com/v2/socialActions/{{ encodeURIComponent($json.id) }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"actor\": \"{{ $json.author }}\",\n  \"message\": {\n    \"text\": {{ JSON.stringify($node[\"One item at a time\"].json.firstComment) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "linkedin-comment",
+      "name": "LinkedIn: Comment on Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 240],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "name": "LinkedIn OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcn-data.fr/api/social/mark-posted",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"articleId\": {{ JSON.stringify($node[\"One item at a time\"].json.articleId) }},\n  \"platform\": \"linkedin\",\n  \"postUrn\": {{ JSON.stringify($node[\"LinkedIn: Create Post\"].json.id) }},\n  \"commentUrn\": {{ JSON.stringify($node[\"LinkedIn: Comment on Post\"].json.id) }}\n}",
+        "options": {}
+      },
+      "id": "http-mark-posted",
+      "name": "Mark posted on Fly",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 240],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fly n8n secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcn-data.fr/api/social/mark-failed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"articleId\": {{ JSON.stringify($node[\"One item at a time\"].json.articleId) }},\n  \"platform\": \"linkedin\",\n  \"error\": {{ JSON.stringify($json.error?.message || $json.message || 'Unknown n8n workflow error') }}\n}",
+        "options": {}
+      },
+      "id": "http-mark-failed",
+      "name": "Mark failed on Fly",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 420],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fly n8n secret"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "GET pending articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET pending articles": {
+      "main": [
+        [
+          {
+            "node": "If any pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If any pending": {
+      "main": [
+        [
+          {
+            "node": "Extract items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract items": {
+      "main": [
+        [
+          {
+            "node": "One item at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item at a time": {
+      "main": [
+        [],
+        [
+          {
+            "node": "LinkedIn: Create Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn: Create Post": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn: Comment on Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn: Comment on Post": {
+      "main": [
+        [
+          {
+            "node": "Mark posted on Fly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark posted on Fly": {
+      "main": [
+        [
+          {
+            "node": "One item at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "instanceId": "gcn-data-linkedin-poll-v1"
+  },
+  "tags": []
+}
