@@ -84,6 +84,18 @@ const cvDataSchema = new mongoose.Schema(
         // PDF. Useful for bootcamps / RNCP credentials where you want to
         // enumerate the modules covered.
         description: String,
+        // Explicit typology so a recruiter never confuses a state-recognized
+        // RNCP title (La Capsule) with a training-provider completion
+        // certificate (Jedha AI Essentials).
+        //   'rncp'       → state-registered credential; rncpLevel populated
+        //   'completion' → training provider certificate, no state registration
+        //   'other'      → anything else (default)
+        type: {
+          type: String,
+          enum: ['rncp', 'completion', 'other'],
+          default: 'other',
+        },
+        rncpLevel: Number, // 5/6/7/... only meaningful when type='rncp'
       },
     ],
   },

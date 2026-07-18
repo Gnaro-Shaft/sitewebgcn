@@ -172,14 +172,17 @@ const DOCS = [
       {
         name: 'Artificial Intelligence Essentials',
         issuer: 'Jedha',
-        date: 'Avril 2026 (sans expiration)',
+        date: 'Avril 2026',
+        type: 'completion',
         description:
           "Compétences validées : Python pour l'IA, intégration et personnalisation de LLMs (IA générative), conception d'agents IA capables d'utiliser des outils, prompt engineering, RAG avec bases vectorielles, pipelines et workflows d'IA automatisés (n8n), connexion de données (APIs, bases de données) aux applications d'IA, évaluation et amélioration des modèles.",
       },
       {
         name: "Chef de projet de développement d'applications web et mobile",
-        issuer: 'La Capsule — Coding Bootcamp 13 semaines (RNCP Niveau 6, Bac+3/4)',
+        issuer: 'La Capsule — Coding Bootcamp 13 semaines',
         date: 'oct. 2021 – déc. 2021',
+        type: 'rncp',
+        rncpLevel: 6,
         description:
           "Modules : conception et prototypage d'applications web ; front-end HTML5 / CSS / JavaScript ; back-end Node.js / Express ; base de données MongoDB ; workflow Git / GitHub.",
       },
@@ -331,14 +334,17 @@ const DOCS = [
       {
         name: 'Artificial Intelligence Essentials',
         issuer: 'Jedha',
-        date: 'April 2026 (no expiration)',
+        date: 'April 2026',
+        type: 'completion',
         description:
           'Validated skills: Python for AI, integrating and customizing generative AI models (LLMs), designing AI agents capable of using tools, prompt engineering, RAG with vector databases, automated AI pipelines and workflows (n8n), connecting data sources (APIs, databases) to AI applications, evaluating and improving model performance.',
       },
       {
         name: 'Web & Mobile Application Development Project Manager',
-        issuer: 'La Capsule — 13-week Coding Bootcamp (RNCP Level 6, Bachelor equivalent)',
+        issuer: 'La Capsule — 13-week Coding Bootcamp',
         date: 'Oct. 2021 – Dec. 2021',
+        type: 'rncp',
+        rncpLevel: 6,
         description:
           'Modules: web application design and prototyping; front-end HTML5 / CSS / JavaScript; back-end Node.js / Express; MongoDB database; Git / GitHub workflow.',
       },

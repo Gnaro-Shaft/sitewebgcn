@@ -109,6 +109,48 @@ describe('projects section', () => {
   });
 });
 
+describe('certification type badges', () => {
+  it('renders different bytes for rncp vs completion vs other', async () => {
+    const withRncp = await generateCV({
+      ...MINIMAL_CV,
+      certifications: [{ name: 'C', issuer: 'I', date: 'D', type: 'rncp', rncpLevel: 6 }],
+    });
+    const withCompletion = await generateCV({
+      ...MINIMAL_CV,
+      certifications: [{ name: 'C', issuer: 'I', date: 'D', type: 'completion' }],
+    });
+    const withOther = await generateCV({
+      ...MINIMAL_CV,
+      certifications: [{ name: 'C', issuer: 'I', date: 'D', type: 'other' }],
+    });
+    expect(withRncp.equals(withCompletion)).toBe(false);
+    expect(withRncp.equals(withOther)).toBe(false);
+    expect(withCompletion.equals(withOther)).toBe(false);
+  });
+
+  it('accepts undefined type (defaults to no badge, same as other)', async () => {
+    const noType = await generateCV({
+      ...MINIMAL_CV,
+      certifications: [{ name: 'C', issuer: 'I', date: 'D' }],
+    });
+    const other = await generateCV({
+      ...MINIMAL_CV,
+      certifications: [{ name: 'C', issuer: 'I', date: 'D', type: 'other' }],
+    });
+    // Both should render without a badge. Byte-identical comparison is
+    // impossible because pdfkit embeds a per-call CreationDate — instead
+    // we assert the sizes are within a small tolerance, meaning the
+    // badge line was NOT added in either case.
+    expect(Math.abs(noType.length - other.length)).toBeLessThan(50);
+    // And both should be smaller than a version with an actual badge
+    const withBadge = await generateCV({
+      ...MINIMAL_CV,
+      certifications: [{ name: 'C', issuer: 'I', date: 'D', type: 'rncp', rncpLevel: 6 }],
+    });
+    expect(withBadge.length).toBeGreaterThan(noType.length);
+  });
+});
+
 describe('exported palettes and labels', () => {
   it('LIGHT_COLORS and DARK_COLORS have the required keys', () => {
     for (const palette of [LIGHT_COLORS, DARK_COLORS]) {

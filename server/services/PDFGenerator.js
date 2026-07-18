@@ -43,6 +43,22 @@ const SECTION_LABELS = {
   },
 };
 
+// Badge shown ABOVE the certification headline to distinguish types at a
+// glance. Renders in the accent color for RNCP (state-recognized weight),
+// muted for a completion certificate (accurate but not overclaimed).
+const CERT_TYPE_LABELS = {
+  fr: {
+    rncp: (level) => (level ? `Titre RNCP Niveau ${level}` : 'Titre RNCP'),
+    completion: () => 'Certificat de complétion',
+    other: () => null,
+  },
+  en: {
+    rncp: (level) => (level ? `RNCP-registered Level ${level}` : 'RNCP-registered'),
+    completion: () => 'Completion certificate',
+    other: () => null,
+  },
+};
+
 // Generate a PDF from a CvData document. Returns a Promise<Buffer>.
 // Options: { theme: 'light'|'dark' (default light), lang: 'fr'|'en' (default en) }
 function generateCV(cvData, { theme = 'light', lang = 'en' } = {}) {
@@ -194,7 +210,18 @@ function generateCV(cvData, { theme = 'light', lang = 'en' } = {}) {
   // --- Certifications ---
   if (cvData.certifications?.length) {
     sectionTitle(doc, LABELS.certifications, COLORS);
+    const typeLabels = CERT_TYPE_LABELS[lang] || CERT_TYPE_LABELS.en;
     for (const cert of cvData.certifications) {
+      // Render the type badge above the headline — RNCP in accent to signal
+      // the higher weight, completion in muted to signal accurate but lesser
+      // credential. 'other' (or absent) → no badge, keeping the layout clean.
+      const type = cert.type || 'other';
+      const badgeFn = typeLabels[type] || typeLabels.other;
+      const badgeText = badgeFn(cert.rncpLevel);
+      if (badgeText) {
+        const badgeColor = type === 'rncp' ? COLORS.accent : COLORS.light;
+        doc.fontSize(8).fillColor(badgeColor).text(badgeText.toUpperCase());
+      }
       doc
         .fontSize(10)
         .fillColor(COLORS.primary)
@@ -203,8 +230,8 @@ function generateCV(cvData, { theme = 'light', lang = 'en' } = {}) {
         .text(`  — ${cert.issuer || ''}${cert.date ? `, ${cert.date}` : ''}`);
       if (cert.description) {
         doc.fontSize(9).fillColor(COLORS.text).text(cert.description);
-        doc.moveDown(0.2);
       }
+      doc.moveDown(0.3);
     }
   }
 
@@ -237,4 +264,5 @@ module.exports = {
   LIGHT_COLORS,
   DARK_COLORS,
   SECTION_LABELS,
+  CERT_TYPE_LABELS,
 };
