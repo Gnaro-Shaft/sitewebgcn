@@ -115,28 +115,52 @@ const DOCS = [
         items: ['ITIL', 'Helpdesk N2/N3', 'Active Directory', 'Windows Server', 'TCP/IP', 'WAN/LAN'],
       },
     ],
+    projects: [
+      {
+        name: 'Mnemo — RAG self-hosted sur ma vault Obsidian',
+        techStack: ['Python', 'FastAPI', 'Qdrant', 'bge-m3', 'Docker Compose'],
+        description:
+          'Système RAG production sur mes notes personnelles. A/B testing des modèles d\'embeddings avec benchmark de 20 queries — Hit@1 passé de 30 % (nomic-embed-text) à 90 % (bge-m3). Pipeline dockerisé complet.',
+        link: 'gcn-data.fr/projects (Mnemo)',
+        highlights: [
+          'Hit@1 : 30 % → 90 % en changeant juste le modèle d\'embeddings',
+          'Ingestion incrémentale + chunking + Qdrant en production',
+        ],
+        startDate: '2024',
+        endDate: 'présent',
+      },
+      {
+        name: 'Hyperliquid Trading Bot V8 — bot ML de trading crypto',
+        techStack: ['Python', 'scikit-learn', 'MongoDB', 'WebSocket', 'Fly.io'],
+        description:
+          'Bot de trading crypto déployé 24/7 sur Fly.io. Scoring multi-timeframe filtré par un modèle ML (scikit-learn) avec réentraînement automatique toutes les 6h — pattern champion/challenger, holdout de validation, garde anti-régression.',
+        link: '',
+        highlights: [
+          'Réentraînement ML 6h avec champion/challenger + holdout validation',
+          'Gestion du risque : exposure caps, circuit breaker, corrélation BTC/SOL',
+          'Observabilité : logs de décisions structurés + heartbeat visualisés dans un dashboard React perso',
+        ],
+        startDate: '2024',
+        endDate: 'présent',
+      },
+      {
+        name: 'Jarvis Local — assistant IA multi-agents',
+        techStack: ['Python', 'Claude API', 'MCP'],
+        description:
+          'Assistant personnel multi-agents utilisant Claude via MCP (Model Context Protocol). Recherche vault Obsidian, prise de notes, synthèse email, planification.',
+        link: '',
+        highlights: [],
+        startDate: '2024',
+        endDate: 'présent',
+      },
+    ],
     languages: [
       { name: 'Français', level: 'Natif' },
       { name: 'Anglais', level: 'Professionnel' },
     ],
-    certifications: [
-      {
-        name: 'Machine Learning appliqué (scikit-learn, holdout validation)',
-        issuer: 'Autoformation via projet Bot V8',
-        date: '2024–présent',
-      },
-      {
-        name: 'RAG & Embeddings (A/B testing bge-m3, Qdrant en production)',
-        issuer: 'Autoformation via projet Mnemo',
-        date: '2024–présent',
-      },
-      {
-        name: 'API Claude / Anthropic — intégration production, MCP',
-        issuer: 'Anthropic',
-        date: '2024–présent',
-      },
-      { name: 'ITIL Foundation', issuer: '', date: '' },
-    ],
+    // Pas de certifications formelles à ce jour — la crédibilité passe par
+    // les projets ci-dessus. Section volontairement vide (aucune ligne rendue).
+    certifications: [],
   },
   // English mirror
   {
@@ -227,28 +251,52 @@ const DOCS = [
         items: ['ITIL', 'Helpdesk L2/L3', 'Active Directory', 'Windows Server', 'TCP/IP', 'WAN/LAN'],
       },
     ],
+    projects: [
+      {
+        name: 'Mnemo — Self-hosted RAG for my Obsidian vault',
+        techStack: ['Python', 'FastAPI', 'Qdrant', 'bge-m3', 'Docker Compose'],
+        description:
+          'Production-grade RAG on my personal notes. A/B tested embedding models on a 20-query benchmark — Hit@1 lifted from 30% (nomic-embed-text) to 90% (bge-m3). Fully dockerized pipeline.',
+        link: 'gcn-data.fr/projects (Mnemo)',
+        highlights: [
+          'Hit@1: 30% → 90% by swapping just the embedding model',
+          'Incremental ingestion + chunking + Qdrant in production',
+        ],
+        startDate: '2024',
+        endDate: 'present',
+      },
+      {
+        name: 'Hyperliquid Trading Bot V8 — ML-driven crypto trading bot',
+        techStack: ['Python', 'scikit-learn', 'MongoDB', 'WebSocket', 'Fly.io'],
+        description:
+          'Crypto trading bot deployed 24/7 on Fly.io. Multi-timeframe scoring filtered by an ML model (scikit-learn) with automatic 6-hour retraining — champion/challenger pattern, holdout validation, anti-regression guard.',
+        link: '',
+        highlights: [
+          '6-hour ML retraining with champion/challenger + holdout validation',
+          'Risk management: exposure caps, circuit breaker, BTC/SOL correlation gate',
+          'Observability: structured decision logs + heartbeat visualized in a personal React dashboard',
+        ],
+        startDate: '2024',
+        endDate: 'present',
+      },
+      {
+        name: 'Jarvis Local — Multi-agent AI assistant',
+        techStack: ['Python', 'Claude API', 'MCP'],
+        description:
+          'Personal multi-agent assistant using Claude via MCP (Model Context Protocol). Obsidian vault search, note-taking, email summarization, planning.',
+        link: '',
+        highlights: [],
+        startDate: '2024',
+        endDate: 'present',
+      },
+    ],
     languages: [
       { name: 'French', level: 'Native' },
       { name: 'English', level: 'Professional' },
     ],
-    certifications: [
-      {
-        name: 'Applied Machine Learning (scikit-learn, holdout validation)',
-        issuer: 'Self-taught via Bot V8 project',
-        date: '2024–present',
-      },
-      {
-        name: 'RAG & Embeddings (A/B testing bge-m3, Qdrant in production)',
-        issuer: 'Self-taught via Mnemo project',
-        date: '2024–present',
-      },
-      {
-        name: 'Claude / Anthropic API — production integration, MCP',
-        issuer: 'Anthropic',
-        date: '2024–present',
-      },
-      { name: 'ITIL Foundation', issuer: '', date: '' },
-    ],
+    // No formal certifications at this stage — credibility comes through
+    // the personal projects above. Section intentionally empty.
+    certifications: [],
   },
 ];
 

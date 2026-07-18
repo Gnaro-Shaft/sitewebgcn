@@ -76,6 +76,39 @@ describe('generateCV', () => {
   });
 });
 
+describe('projects section', () => {
+  it('renders projects (produces different bytes vs same CV without projects)', async () => {
+    const withProjects = await generateCV({
+      ...MINIMAL_CV,
+      projects: [
+        {
+          name: 'Test Project',
+          techStack: ['Python', 'FastAPI'],
+          description: 'A test project.',
+          highlights: ['One highlight'],
+          startDate: '2024',
+          endDate: 'present',
+        },
+      ],
+    });
+    const withoutProjects = await generateCV(MINIMAL_CV);
+    // The projects section adds real content — buffers must differ
+    expect(withProjects.equals(withoutProjects)).toBe(false);
+    expect(withProjects.length).toBeGreaterThan(withoutProjects.length);
+  });
+
+  it('does not render an empty certifications section title', async () => {
+    // With certifications=[] the section header should not appear alone
+    const withEmptyCerts = await generateCV({ ...MINIMAL_CV, certifications: [] });
+    const withoutCertsField = await generateCV({
+      ...MINIMAL_CV,
+      certifications: undefined,
+    });
+    // Both should produce PDFs of similar structure (empty array behaves like undefined)
+    expect(Math.abs(withEmptyCerts.length - withoutCertsField.length)).toBeLessThan(100);
+  });
+});
+
 describe('exported palettes and labels', () => {
   it('LIGHT_COLORS and DARK_COLORS have the required keys', () => {
     for (const palette of [LIGHT_COLORS, DARK_COLORS]) {
@@ -92,10 +125,13 @@ describe('exported palettes and labels', () => {
     expect(LIGHT_COLORS.background).toBeNull();
   });
 
-  it('SECTION_LABELS has fr + en with same keys', () => {
+  it('SECTION_LABELS has fr + en with same keys including projects', () => {
     const frKeys = Object.keys(SECTION_LABELS.fr).sort();
     const enKeys = Object.keys(SECTION_LABELS.en).sort();
     expect(frKeys).toEqual(enKeys);
+    // Projects section must exist in both languages
+    expect(SECTION_LABELS.fr.projects).toBeDefined();
+    expect(SECTION_LABELS.en.projects).toBeDefined();
     // Sanity: labels are non-empty strings
     for (const key of frKeys) {
       expect(SECTION_LABELS.fr[key]).toMatch(/[A-ZÀ-Ÿ]/);

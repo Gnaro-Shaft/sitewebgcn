@@ -55,6 +55,20 @@ const cvDataSchema = new mongoose.Schema(
         items: [String],
       },
     ],
+    // Phase 25 addendum: projects section — the CV's credibility layer for
+    // an AI Engineer role. Distinct from Experience (which is jobs) and
+    // Certifications (which must be actual credentialed certs, not tutorials).
+    projects: [
+      {
+        name: { type: String, required: true },
+        techStack: [String],
+        description: String,
+        link: String,      // URL to GitHub / demo / blog post
+        highlights: [String],
+        startDate: String,
+        endDate: String,
+      },
+    ],
     languages: [
       {
         name: String,

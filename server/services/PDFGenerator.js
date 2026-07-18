@@ -27,6 +27,7 @@ const SECTION_LABELS = {
     profile: 'PROFIL',
     experience: 'EXPÉRIENCE',
     education: 'FORMATION',
+    projects: 'PROJETS PERSONNELS',
     skills: 'COMPÉTENCES',
     languages: 'LANGUES',
     certifications: 'CERTIFICATIONS',
@@ -35,6 +36,7 @@ const SECTION_LABELS = {
     profile: 'PROFILE',
     experience: 'EXPERIENCE',
     education: 'EDUCATION',
+    projects: 'PERSONAL PROJECTS',
     skills: 'SKILLS',
     languages: 'LANGUAGES',
     certifications: 'CERTIFICATIONS',
@@ -118,6 +120,35 @@ function generateCV(cvData, { theme = 'light', lang = 'en' } = {}) {
         for (const h of exp.highlights) {
           doc.fontSize(9).fillColor(COLORS.text).text(`  •  ${h}`, { indent: 10 });
         }
+      }
+      doc.moveDown(0.4);
+    }
+  }
+
+  // --- Projects ---
+  // Placed right after Experience: projects reinforce the AI Engineer
+  // credibility — the recruiter reads job history, then immediately sees
+  // the personal work that proves technical depth.
+  if (cvData.projects?.length) {
+    sectionTitle(doc, LABELS.projects, COLORS);
+    for (const proj of cvData.projects) {
+      const dates = [proj.startDate, proj.endDate].filter(Boolean).join(' - ');
+      doc.fontSize(11).fillColor(COLORS.primary).text(proj.name, { continued: true });
+      if (dates) doc.fontSize(10).fillColor(COLORS.light).text(`  ${dates}`, { align: 'right' });
+      else doc.text('');
+      if (proj.techStack?.length) {
+        doc.fontSize(9).fillColor(COLORS.accent).text(proj.techStack.join(' · '));
+      }
+      if (proj.description) {
+        doc.fontSize(9).fillColor(COLORS.text).text(proj.description);
+      }
+      if (proj.highlights?.length) {
+        for (const h of proj.highlights) {
+          doc.fontSize(9).fillColor(COLORS.text).text(`  •  ${h}`, { indent: 10 });
+        }
+      }
+      if (proj.link) {
+        doc.fontSize(9).fillColor(COLORS.light).text(proj.link);
       }
       doc.moveDown(0.4);
     }
