@@ -73,6 +73,24 @@ const DOCS = [
     ],
     education: [
       {
+        degree: 'Artificial Intelligence Essentials',
+        school: 'Jedha',
+        location: '',
+        startDate: '',
+        endDate: 'Avril 2026',
+        description:
+          "Formation intensive IA appliquée : Python pour l'IA, intégration et personnalisation de LLMs, conception d'agents IA, prompt engineering, RAG + bases vectorielles, workflows automatisés (n8n), APIs, évaluation de modèles. Certifié (voir Certifications).",
+      },
+      {
+        degree: "Chef de projet de développement d'applications web et mobile",
+        school: 'La Capsule',
+        location: 'Paris',
+        startDate: 'Oct. 2021',
+        endDate: 'Déc. 2021',
+        description:
+          'Bootcamp intensif full-stack (13 semaines). Front-end HTML5/CSS/JS, back-end Node.js/Express, MongoDB, Git/GitHub. Certifié RNCP Niveau 6 (voir Certifications).',
+      },
+      {
         degree: 'Technicien Informatique Systèmes et Réseaux',
         school: 'GEFI',
         location: '',
@@ -152,6 +170,13 @@ const DOCS = [
     ],
     certifications: [
       {
+        name: 'Artificial Intelligence Essentials',
+        issuer: 'Jedha',
+        date: 'Avril 2026 (sans expiration)',
+        description:
+          "Compétences validées : Python pour l'IA, intégration et personnalisation de LLMs (IA générative), conception d'agents IA capables d'utiliser des outils, prompt engineering, RAG avec bases vectorielles, pipelines et workflows d'IA automatisés (n8n), connexion de données (APIs, bases de données) aux applications d'IA, évaluation et amélioration des modèles.",
+      },
+      {
         name: "Chef de projet de développement d'applications web et mobile",
         issuer: 'La Capsule — Coding Bootcamp 13 semaines (RNCP Niveau 6, Bac+3/4)',
         date: 'oct. 2021 – déc. 2021',
@@ -206,6 +231,24 @@ const DOCS = [
       },
     ],
     education: [
+      {
+        degree: 'Artificial Intelligence Essentials',
+        school: 'Jedha',
+        location: '',
+        startDate: '',
+        endDate: 'April 2026',
+        description:
+          'Intensive applied AI training: Python for AI systems, integrating and customizing LLMs, designing AI agents, prompt engineering, RAG + vector databases, automated pipelines (n8n), APIs, model evaluation. Certified (see Certifications).',
+      },
+      {
+        degree: 'Web & Mobile Application Development Project Manager',
+        school: 'La Capsule',
+        location: 'Paris, France',
+        startDate: 'Oct. 2021',
+        endDate: 'Dec. 2021',
+        description:
+          'Intensive full-stack bootcamp (13 weeks). Front-end HTML5/CSS/JS, back-end Node.js/Express, MongoDB, Git/GitHub. RNCP Level 6 certified (see Certifications).',
+      },
       {
         degree: 'IT Systems & Networks Technician',
         school: 'GEFI',
@@ -285,6 +328,13 @@ const DOCS = [
       { name: 'English', level: 'Professional' },
     ],
     certifications: [
+      {
+        name: 'Artificial Intelligence Essentials',
+        issuer: 'Jedha',
+        date: 'April 2026 (no expiration)',
+        description:
+          'Validated skills: Python for AI, integrating and customizing generative AI models (LLMs), designing AI agents capable of using tools, prompt engineering, RAG with vector databases, automated AI pipelines and workflows (n8n), connecting data sources (APIs, databases) to AI applications, evaluating and improving model performance.',
+      },
       {
         name: 'Web & Mobile Application Development Project Manager',
         issuer: 'La Capsule — 13-week Coding Bootcamp (RNCP Level 6, Bachelor equivalent)',
