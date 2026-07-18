@@ -1,18 +1,66 @@
 const PDFDocument = require('pdfkit');
 
-const COLORS = {
-  primary: '#1a1a2e',
-  accent: '#0f3460',
-  text: '#333333',
-  light: '#666666',
-  line: '#cccccc',
+// Phase 25: theme-aware + lang-aware PDF generation.
+// Two color palettes (light/dark) and two label sets (fr/en).
+
+const LIGHT_COLORS = {
+  primary: '#1a1a2e',   // headings + name
+  accent: '#0f3460',    // section titles + company/school
+  text: '#333333',      // body text
+  light: '#666666',     // dates + subtle details
+  line: '#cccccc',      // separator
+  background: null,     // no background fill for light — white paper
 };
 
-function generateCV(cvData) {
+const DARK_COLORS = {
+  primary: '#e8ebf0',   // headings + name — near white
+  accent: '#00ff88',    // section titles — neon green matches site accent
+  text: '#c9d1d9',      // body text — muted white
+  light: '#8b949e',     // dates + subtle
+  line: '#30363d',      // separator — dark subtle
+  background: '#0d1117', // dark bg fill
+};
+
+// Section titles per language. If lang is unknown, falls back to English.
+const SECTION_LABELS = {
+  fr: {
+    profile: 'PROFIL',
+    experience: 'EXPÉRIENCE',
+    education: 'FORMATION',
+    skills: 'COMPÉTENCES',
+    languages: 'LANGUES',
+    certifications: 'CERTIFICATIONS',
+  },
+  en: {
+    profile: 'PROFILE',
+    experience: 'EXPERIENCE',
+    education: 'EDUCATION',
+    skills: 'SKILLS',
+    languages: 'LANGUAGES',
+    certifications: 'CERTIFICATIONS',
+  },
+};
+
+// Generate a PDF from a CvData document. Returns a Promise<Buffer>.
+// Options: { theme: 'light'|'dark' (default light), lang: 'fr'|'en' (default en) }
+function generateCV(cvData, { theme = 'light', lang = 'en' } = {}) {
+  const COLORS = theme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
+  const LABELS = SECTION_LABELS[lang] || SECTION_LABELS.en;
+
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   const chunks = [];
-
   doc.on('data', (chunk) => chunks.push(chunk));
+
+  // Paint dark background over the whole first page BEFORE anything else.
+  // pdfkit doesn't have a native "page background" — we draw a filled rect
+  // covering the media box, then restore drawing state.
+  if (COLORS.background) {
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.background);
+    // Also register a pageAdded handler so subsequent pages get the fill
+    doc.on('pageAdded', () => {
+      doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.background);
+    });
+  }
 
   // --- Header ---
   doc
@@ -45,18 +93,18 @@ function generateCV(cvData) {
   }
 
   doc.moveDown(0.5);
-  drawLine(doc);
+  drawLine(doc, COLORS);
 
   // --- Summary ---
   if (cvData.summary) {
-    sectionTitle(doc, 'PROFILE');
+    sectionTitle(doc, LABELS.profile, COLORS);
     doc.fontSize(10).fillColor(COLORS.text).text(cvData.summary);
     doc.moveDown(0.5);
   }
 
   // --- Experience ---
   if (cvData.experience?.length) {
-    sectionTitle(doc, 'EXPERIENCE');
+    sectionTitle(doc, LABELS.experience, COLORS);
     for (const exp of cvData.experience) {
       const dates = [exp.startDate, exp.endDate].filter(Boolean).join(' - ');
       doc.fontSize(11).fillColor(COLORS.primary).text(exp.role, { continued: true });
@@ -77,7 +125,7 @@ function generateCV(cvData) {
 
   // --- Education ---
   if (cvData.education?.length) {
-    sectionTitle(doc, 'EDUCATION');
+    sectionTitle(doc, LABELS.education, COLORS);
     for (const edu of cvData.education) {
       const dates = [edu.startDate, edu.endDate].filter(Boolean).join(' - ');
       doc.fontSize(11).fillColor(COLORS.primary).text(edu.degree, { continued: true });
@@ -92,7 +140,7 @@ function generateCV(cvData) {
 
   // --- Skills ---
   if (cvData.skills?.length) {
-    sectionTitle(doc, 'SKILLS');
+    sectionTitle(doc, LABELS.skills, COLORS);
     for (const skill of cvData.skills) {
       doc
         .fontSize(10)
@@ -106,7 +154,7 @@ function generateCV(cvData) {
 
   // --- Languages ---
   if (cvData.languages?.length) {
-    sectionTitle(doc, 'LANGUAGES');
+    sectionTitle(doc, LABELS.languages, COLORS);
     const langLine = cvData.languages.map((l) => `${l.name} (${l.level})`).join('  |  ');
     doc.fontSize(10).fillColor(COLORS.text).text(langLine);
     doc.moveDown(0.4);
@@ -114,7 +162,7 @@ function generateCV(cvData) {
 
   // --- Certifications ---
   if (cvData.certifications?.length) {
-    sectionTitle(doc, 'CERTIFICATIONS');
+    sectionTitle(doc, LABELS.certifications, COLORS);
     for (const cert of cvData.certifications) {
       doc
         .fontSize(10)
@@ -132,14 +180,14 @@ function generateCV(cvData) {
   });
 }
 
-function sectionTitle(doc, title) {
+function sectionTitle(doc, title, COLORS) {
   doc.moveDown(0.3);
   doc.fontSize(12).fillColor(COLORS.accent).text(title);
-  drawLine(doc);
+  drawLine(doc, COLORS);
   doc.moveDown(0.2);
 }
 
-function drawLine(doc) {
+function drawLine(doc, COLORS) {
   doc
     .strokeColor(COLORS.line)
     .lineWidth(0.5)
@@ -149,4 +197,9 @@ function drawLine(doc) {
   doc.moveDown(0.3);
 }
 
-module.exports = { generateCV };
+module.exports = {
+  generateCV,
+  LIGHT_COLORS,
+  DARK_COLORS,
+  SECTION_LABELS,
+};

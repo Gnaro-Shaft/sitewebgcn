@@ -1,14 +1,16 @@
 const path = require('path');
 const fs = require('fs/promises');
-const CvData = require('../models/CvData');
-const { generateCV } = require('../services/PDFGenerator');
 const asyncHandler = require('../middleware/asyncHandler');
 
-// Two-axis matrix: language × visual theme. The theme axis was added so
-// visitors get a CV that matches whichever theme they're browsing in
-// (Phase 23 addendum). Filenames handed to the recruiter are stripped of
-// the _clair/_light/_dark suffixes — those are storage details, not
-// something a hiring manager should see.
+// Namespace imports so vi.spyOn in tests can intercept at runtime — learned
+// this pattern the hard way in Phases 17, 19, 24 (destructured refs are
+// captured at load time and mocks miss them).
+const CvData = require('../models/CvData');
+const PDFGenerator = require('../services/PDFGenerator');
+
+// Static PDF fallback map — used only when no CvData is in Mongo for the
+// requested lang. Filenames handed to the recruiter drop the internal
+// _clair/_light/_dark suffixes.
 const CV_FILES = {
   fr: {
     light: {
@@ -32,29 +34,18 @@ const CV_FILES = {
   },
 };
 
-// Normalize any incoming lang value to 'fr' or 'en'. Accepts variants
-// like 'EN', 'en-US', 'fr-FR' — anything not clearly English falls back
-// to French, which matches the site's default locale.
 function normalizeLang(raw) {
   if (typeof raw !== 'string') return 'fr';
   const short = raw.toLowerCase().slice(0, 2);
   return short === 'en' ? 'en' : 'fr';
 }
 
-// Default theme is 'light'. Rationale: a raw link (no ?theme=) — shared
-// on LinkedIn, sitting in an ATS, dropped in an email — hits the light
-// version, which is the safer/more universal look for print + PDF readers
-// that ignore embedded CSS. Anything not explicitly 'dark' → 'light'.
 function normalizeTheme(raw) {
   if (typeof raw !== 'string') return 'light';
   return raw.toLowerCase() === 'dark' ? 'dark' : 'light';
 }
 
-// Resolve with two layers of fallback so we never 404 on a real request
-// when at least one file exists:
-//   1. Requested theme is missing on disk → same lang, light theme
-//   2. Requested lang is missing entirely → FR light (final safety net)
-// Returns null only if literally everything is missing — caller 404s.
+// Two-layer fallback across the static file matrix.
 async function resolveCvFile(lang, theme) {
   const primary = CV_FILES[lang]?.[theme];
   if (primary) {
@@ -73,50 +64,77 @@ async function resolveCvFile(lang, theme) {
   return null;
 }
 
+// Recruiter-facing filename per language (drops the internal suffixes).
+function filenameFor(lang) {
+  return lang === 'en'
+    ? 'CV_Genaro_Nisus_AI_ML_Engineer.pdf'
+    : 'CV_Genaro_Nisus_Ingenieur_IA_ML.pdf';
+}
+
 // GET /api/cv/download — public
 // Query params (both optional):
-//   ?lang=fr|en    default 'fr'
-//   ?theme=light|dark  default 'light'
+//   ?lang=fr|en          default 'fr'
+//   ?theme=light|dark    default 'light'
+//
+// Strategy:
+//   1. Try dynamic generation from CvData in Mongo for this lang
+//      → always-fresh CV, no static file to maintain
+//   2. If no CvData for this lang → fall back to the static PDF matrix
+//      → ensures the download endpoint never breaks during migration
 exports.downloadCV = asyncHandler(async (req, res) => {
   const lang = normalizeLang(req.query.lang);
   const theme = normalizeTheme(req.query.theme);
 
+  // Try dynamic path first
+  const cvData = await CvData.findOne({ lang });
+  if (cvData) {
+    const pdfBuffer = await PDFGenerator.generateCV(cvData, { theme, lang });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filenameFor(lang)}"`,
+      'Content-Length': pdfBuffer.length,
+      // Cache-Control: no-store — the CV can change any time via admin UI,
+      // so don't let CDNs or browsers cache a stale version.
+      'Cache-Control': 'no-store',
+    });
+    return res.send(pdfBuffer);
+  }
+
+  // Fallback: static file matrix (previous behavior)
   const cv = await resolveCvFile(lang, theme);
   if (!cv) {
     return res.status(404).json({ success: false, error: 'CV file not found' });
   }
-
-  // res.download() sets Content-Type: application/pdf (via extension) and
-  // Content-Disposition: attachment; filename="…". The `filename` we pass
-  // is the recruiter-facing name — no _clair/_light/_dark suffix leaks.
   res.download(cv.path, cv.filename);
 });
 
-// Exposed for potential unit tests — pure functions, no DB/network.
 exports._normalizeLang = normalizeLang;
 exports._normalizeTheme = normalizeTheme;
+exports._filenameFor = filenameFor;
 
-// GET /api/cv/data — admin, get raw CV data
+// GET /api/cv/data?lang=fr — admin, get raw CV data for a language
 exports.getCvData = asyncHandler(async (req, res) => {
-  const cvData = await CvData.findOne().sort({ updatedAt: -1 });
+  const lang = normalizeLang(req.query.lang);
+  const cvData = await CvData.findOne({ lang });
 
   if (!cvData) {
-    return res.status(404).json({ success: false, error: 'CV data not found' });
+    return res.status(404).json({ success: false, error: 'CV data not found', lang });
   }
 
   res.json({ success: true, data: cvData });
 });
 
-// PUT /api/cv/data — admin, create or update CV data (upsert)
+// PUT /api/cv/data?lang=fr — admin, upsert CV data for a language
 exports.upsertCvData = asyncHandler(async (req, res) => {
-  let cvData = await CvData.findOne().sort({ updatedAt: -1 });
+  const lang = normalizeLang(req.query.lang);
+  // Never let the client override the discriminating lang field.
+  const payload = { ...(req.body || {}), lang };
 
-  if (cvData) {
-    Object.assign(cvData, req.body);
-    await cvData.save();
-  } else {
-    cvData = await CvData.create(req.body);
-  }
+  const cvData = await CvData.findOneAndUpdate(
+    { lang },
+    { $set: payload },
+    { returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true }
+  );
 
   res.json({ success: true, data: cvData });
 });

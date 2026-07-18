@@ -2,6 +2,15 @@ const mongoose = require('mongoose');
 
 const cvDataSchema = new mongoose.Schema(
   {
+    // One document per language. Enforced unique at index level.
+    // Phase 25: enables dynamic CV generation from DB with lang selector.
+    lang: {
+      type: String,
+      enum: ['fr', 'en'],
+      required: true,
+      unique: true,
+      index: true,
+    },
     fullName: {
       type: String,
       required: true,

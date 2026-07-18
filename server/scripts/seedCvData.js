@@ -1,0 +1,293 @@
+// One-shot seed for CvData. Idempotent — safe to re-run.
+//
+// Populates 2 documents (fr, en) with the current CV content matching
+// the site's Ingénieur Data & IA positioning (Phase 23 pivot).
+//
+// USAGE:
+//   node server/scripts/seedCvData.js               # populate + confirm
+//   node server/scripts/seedCvData.js --dry-run     # preview only
+//
+// Requires MONGODB_URI. After running, `/api/cv/download?lang=fr|en` will
+// generate the PDF from these docs. Admin UI (Phase 25 Session B) will
+// let me edit them without touching this script again.
+
+require('dotenv').config();
+const mongoose = require('mongoose');
+const CvData = require('../models/CvData');
+
+const DRY_RUN = process.argv.includes('--dry-run');
+
+const CONTACT = {
+  email: 'gc.nisus@outlook.fr',
+  phone: '+33 6 98 45 02 89',
+  location: 'Suresnes (92), France',
+  website: 'gcn-data.fr',
+  github: 'github.com/Gnaro-Shaft',
+  linkedin: 'linkedin.com/in/gcnisus',
+};
+
+const DOCS = [
+  {
+    lang: 'fr',
+    fullName: 'GENARO-CEDRIC NISUS',
+    title: 'Ingénieur Data & IA',
+    ...CONTACT,
+    summary:
+      "Ingénieur Data & IA avec 7+ ans en environnements techniques critiques (C2S Bouygues / TF1). Je conçois des systèmes d'IA de qualité production : RAG self-hosted évalué à 90 % de précision (Mnemo), assistant IA multi-agents (Jarvis Local), et bot de trading crypto avec filtre ML déployé 24/7 (Hyperliquid V8). Certifié Chef de projet développement web/mobile (La Capsule, RNCP niv. 6). Focus finance et crypto.",
+    experience: [
+      {
+        role: 'Technicien Informatique & Mobile',
+        company: 'C2S Bouygues (mission TF1)',
+        location: 'Boulogne-Billancourt',
+        startDate: 'Juin 2018',
+        endDate: 'Présent',
+        description:
+          "Support technique niveau 2 en environnement Windows/AD/O365, incidents complexes et procédures — le réflexe transféré à l'ingénierie IA : décortiquer un système, remonter à la cause racine, ne rien lâcher.",
+        highlights: [
+          '30+ incidents/jour, taux de résolution N1 > 85 %',
+          "Analyse data-driven des tendances d'incidents pour améliorer les processus",
+          'Formation et supervision de 5 techniciens, procédures standardisées',
+          'Administration AD, déploiement postes, gestion droits et sécurité SI',
+        ],
+      },
+      {
+        role: 'Technicien Helpdesk',
+        company: 'Eiffage',
+        location: 'La Défense',
+        startDate: '2017',
+        endDate: '2018',
+        description:
+          'Support technique N2 pour 500+ utilisateurs : diagnostic, résolution et escalade en environnement ITIL.',
+        highlights: [],
+      },
+      {
+        role: 'Conseiller Clientèle',
+        company: 'Bouygues Telecom',
+        location: '',
+        startDate: '2007',
+        endDate: '2017',
+        description:
+          "Gestion d'un portefeuille de 200+ clients B2B/B2C : analyse besoins, conseil technique, suivi KPIs. Management d'équipe.",
+        highlights: [],
+      },
+    ],
+    education: [
+      {
+        degree: 'Chef de Projet Dev. Applications Web & Mobile',
+        school: 'La Capsule',
+        location: 'Paris',
+        startDate: 'Oct. 2021',
+        endDate: 'Déc. 2021',
+        description: 'Certification RNCP Niveau 6 (Bac+3/4). Formation intensive full-stack.',
+      },
+      {
+        degree: 'Technicien Informatique Systèmes et Réseaux',
+        school: 'GEFI',
+        location: '',
+        startDate: '',
+        endDate: '2017',
+        description: 'Certification Professionnelle Niveau 5 (Bac+2).',
+      },
+    ],
+    skills: [
+      {
+        category: 'IA & Machine Learning',
+        items: [
+          'Python', 'scikit-learn', 'Machine Learning', 'RAG', 'Embeddings (bge-m3)',
+          'Qdrant', 'LLM (Claude API, OpenAI API)', 'MCP', 'Prompt Engineering',
+          'Pandas', 'NumPy',
+        ],
+      },
+      {
+        category: 'Backend',
+        items: ['FastAPI', 'Node.js', 'Express.js', 'API REST', 'MongoDB', 'PostgreSQL', 'Mongoose'],
+      },
+      {
+        category: 'Frontend',
+        items: ['React.js', 'TypeScript', 'JavaScript', 'HTML5', 'CSS3'],
+      },
+      {
+        category: 'DevOps & Cloud',
+        items: ['Git', 'GitHub', 'Docker', 'Fly.io', 'Render', 'Vercel', 'CI/CD', 'Linux'],
+      },
+      {
+        category: 'Infrastructure IT',
+        items: ['ITIL', 'Helpdesk N2/N3', 'Active Directory', 'Windows Server', 'TCP/IP', 'WAN/LAN'],
+      },
+    ],
+    languages: [
+      { name: 'Français', level: 'Natif' },
+      { name: 'Anglais', level: 'Professionnel' },
+    ],
+    certifications: [
+      {
+        name: 'Machine Learning appliqué (scikit-learn, holdout validation)',
+        issuer: 'Autoformation via projet Bot V8',
+        date: '2024–présent',
+      },
+      {
+        name: 'RAG & Embeddings (A/B testing bge-m3, Qdrant en production)',
+        issuer: 'Autoformation via projet Mnemo',
+        date: '2024–présent',
+      },
+      {
+        name: 'API Claude / Anthropic — intégration production, MCP',
+        issuer: 'Anthropic',
+        date: '2024–présent',
+      },
+      { name: 'ITIL Foundation', issuer: '', date: '' },
+    ],
+  },
+  // English mirror
+  {
+    lang: 'en',
+    fullName: 'GENARO-CEDRIC NISUS',
+    title: 'Data & AI Engineer',
+    ...CONTACT,
+    summary:
+      "Data & AI Engineer with 7+ years in mission-critical technical environments (C2S Bouygues / TF1). I build production-grade AI systems: a self-hosted RAG evaluated at 90% precision (Mnemo), a multi-agent AI assistant (Jarvis Local), and a crypto trading bot with an ML filter deployed 24/7 (Hyperliquid V8). Certified web/mobile development project manager (La Capsule, RNCP level 6). Focus on finance and crypto.",
+    experience: [
+      {
+        role: 'IT & Mobile Technician',
+        company: 'C2S Bouygues (TF1 assignment)',
+        location: 'Boulogne-Billancourt, France',
+        startDate: 'June 2018',
+        endDate: 'Present',
+        description:
+          'Level 2 technical support in Windows/AD/O365 environment. Key reflex transferred to AI engineering: dissect a system, trace a flow back to its root cause, never give up until it works.',
+        highlights: [
+          '30+ incidents/day, L1 resolution rate > 85%',
+          'Data-driven analysis of incident trends to improve processes',
+          'Trained and supervised a 5-person technician team, standardized procedures',
+          'Managed Active Directory, workstation deployment, permissions and IT security',
+        ],
+      },
+      {
+        role: 'Helpdesk Technician',
+        company: 'Eiffage',
+        location: 'La Défense, France',
+        startDate: '2017',
+        endDate: '2018',
+        description:
+          'L2 technical support for 500+ users: diagnosis, resolution and escalation of incidents in an ITIL environment.',
+        highlights: [],
+      },
+      {
+        role: 'Customer Advisor',
+        company: 'Bouygues Telecom',
+        location: 'France',
+        startDate: '2007',
+        endDate: '2017',
+        description:
+          'Managed a portfolio of 200+ B2B/B2C clients: needs analysis, technical advisory, KPI tracking. Team management.',
+        highlights: [],
+      },
+    ],
+    education: [
+      {
+        degree: 'Web & Mobile Application Development Project Manager',
+        school: 'La Capsule',
+        location: 'Paris, France',
+        startDate: 'Oct. 2021',
+        endDate: 'Dec. 2021',
+        description: 'RNCP Level 6 (Bachelor equivalent). Intensive full-stack training.',
+      },
+      {
+        degree: 'IT Systems & Networks Technician',
+        school: 'GEFI',
+        location: '',
+        startDate: '',
+        endDate: '2017',
+        description: 'Professional Certification Level 5 (Associate equivalent).',
+      },
+    ],
+    skills: [
+      {
+        category: 'AI & Machine Learning',
+        items: [
+          'Python', 'scikit-learn', 'Machine Learning', 'RAG', 'Embeddings (bge-m3)',
+          'Qdrant', 'LLMs (Claude API, OpenAI API)', 'MCP', 'Prompt Engineering',
+          'Pandas', 'NumPy',
+        ],
+      },
+      {
+        category: 'Backend',
+        items: ['FastAPI', 'Node.js', 'Express.js', 'REST API', 'MongoDB', 'PostgreSQL', 'Mongoose'],
+      },
+      {
+        category: 'Frontend',
+        items: ['React.js', 'TypeScript', 'JavaScript', 'HTML5', 'CSS3'],
+      },
+      {
+        category: 'DevOps & Cloud',
+        items: ['Git', 'GitHub', 'Docker', 'Fly.io', 'Render', 'Vercel', 'CI/CD', 'Linux'],
+      },
+      {
+        category: 'IT Infrastructure',
+        items: ['ITIL', 'Helpdesk L2/L3', 'Active Directory', 'Windows Server', 'TCP/IP', 'WAN/LAN'],
+      },
+    ],
+    languages: [
+      { name: 'French', level: 'Native' },
+      { name: 'English', level: 'Professional' },
+    ],
+    certifications: [
+      {
+        name: 'Applied Machine Learning (scikit-learn, holdout validation)',
+        issuer: 'Self-taught via Bot V8 project',
+        date: '2024–present',
+      },
+      {
+        name: 'RAG & Embeddings (A/B testing bge-m3, Qdrant in production)',
+        issuer: 'Self-taught via Mnemo project',
+        date: '2024–present',
+      },
+      {
+        name: 'Claude / Anthropic API — production integration, MCP',
+        issuer: 'Anthropic',
+        date: '2024–present',
+      },
+      { name: 'ITIL Foundation', issuer: '', date: '' },
+    ],
+  },
+];
+
+async function main() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error('❌ MONGODB_URI missing from env. Aborting.');
+    process.exit(1);
+  }
+
+  await mongoose.connect(uri);
+  console.log(`✅ Connected to MongoDB${DRY_RUN ? ' (DRY-RUN MODE)' : ''}`);
+
+  for (const doc of DOCS) {
+    const existing = await CvData.findOne({ lang: doc.lang });
+    if (existing) {
+      console.log(`→ [${doc.lang}] existing document found (_id=${existing._id})`);
+      if (DRY_RUN) {
+        console.log('   dry-run — no changes');
+      } else {
+        Object.assign(existing, doc);
+        await existing.save();
+        console.log('   updated');
+      }
+    } else {
+      console.log(`→ [${doc.lang}] no document — will create`);
+      if (!DRY_RUN) {
+        const created = await CvData.create(doc);
+        console.log(`   created (_id=${created._id})`);
+      }
+    }
+  }
+
+  console.log(`\nDone${DRY_RUN ? ' (dry-run — no writes performed)' : ''}.`);
+  await mongoose.disconnect();
+}
+
+main().catch(async (err) => {
+  console.error('Script failed:', err);
+  await mongoose.disconnect().catch(() => {});
+  process.exit(1);
+});
