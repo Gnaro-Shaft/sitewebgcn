@@ -77,9 +77,13 @@ const cvDataSchema = new mongoose.Schema(
     ],
     certifications: [
       {
-        name: String,
+        name: { type: String, required: true },
         issuer: String,
         date: String,
+        // Optional detail — rendered under the certification headline in the
+        // PDF. Useful for bootcamps / RNCP credentials where you want to
+        // enumerate the modules covered.
+        description: String,
       },
     ],
   },

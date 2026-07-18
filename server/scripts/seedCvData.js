@@ -73,14 +73,6 @@ const DOCS = [
     ],
     education: [
       {
-        degree: 'Chef de Projet Dev. Applications Web & Mobile',
-        school: 'La Capsule',
-        location: 'Paris',
-        startDate: 'Oct. 2021',
-        endDate: 'Déc. 2021',
-        description: 'Certification RNCP Niveau 6 (Bac+3/4). Formation intensive full-stack.',
-      },
-      {
         degree: 'Technicien Informatique Systèmes et Réseaux',
         school: 'GEFI',
         location: '',
@@ -158,9 +150,15 @@ const DOCS = [
       { name: 'Français', level: 'Natif' },
       { name: 'Anglais', level: 'Professionnel' },
     ],
-    // Pas de certifications formelles à ce jour — la crédibilité passe par
-    // les projets ci-dessus. Section volontairement vide (aucune ligne rendue).
-    certifications: [],
+    certifications: [
+      {
+        name: "Chef de projet de développement d'applications web et mobile",
+        issuer: 'La Capsule — Coding Bootcamp 13 semaines (RNCP Niveau 6, Bac+3/4)',
+        date: 'oct. 2021 – déc. 2021',
+        description:
+          "Modules : conception et prototypage d'applications web ; front-end HTML5 / CSS / JavaScript ; back-end Node.js / Express ; base de données MongoDB ; workflow Git / GitHub.",
+      },
+    ],
   },
   // English mirror
   {
@@ -208,14 +206,6 @@ const DOCS = [
       },
     ],
     education: [
-      {
-        degree: 'Web & Mobile Application Development Project Manager',
-        school: 'La Capsule',
-        location: 'Paris, France',
-        startDate: 'Oct. 2021',
-        endDate: 'Dec. 2021',
-        description: 'RNCP Level 6 (Bachelor equivalent). Intensive full-stack training.',
-      },
       {
         degree: 'IT Systems & Networks Technician',
         school: 'GEFI',
@@ -294,9 +284,15 @@ const DOCS = [
       { name: 'French', level: 'Native' },
       { name: 'English', level: 'Professional' },
     ],
-    // No formal certifications at this stage — credibility comes through
-    // the personal projects above. Section intentionally empty.
-    certifications: [],
+    certifications: [
+      {
+        name: 'Web & Mobile Application Development Project Manager',
+        issuer: 'La Capsule — 13-week Coding Bootcamp (RNCP Level 6, Bachelor equivalent)',
+        date: 'Oct. 2021 – Dec. 2021',
+        description:
+          'Modules: web application design and prototyping; front-end HTML5 / CSS / JavaScript; back-end Node.js / Express; MongoDB database; Git / GitHub workflow.',
+      },
+    ],
   },
 ];
 

@@ -201,6 +201,10 @@ function generateCV(cvData, { theme = 'light', lang = 'en' } = {}) {
         .text(cert.name, { continued: true })
         .fillColor(COLORS.light)
         .text(`  — ${cert.issuer || ''}${cert.date ? `, ${cert.date}` : ''}`);
+      if (cert.description) {
+        doc.fontSize(9).fillColor(COLORS.text).text(cert.description);
+        doc.moveDown(0.2);
+      }
     }
   }
 
