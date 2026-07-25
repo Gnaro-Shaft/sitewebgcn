@@ -1,6 +1,6 @@
 // security-middleware.js - Middleware de protection sécurité général
 const rateLimit = require('express-rate-limit');
-const { createLogEntry, writeLog, analyzeLog, generateReport } = require('../scripts/security-logger');
+const { createLogEntry, writeLog, analyzeLog, generateReport } = require('../../scripts/security-logger');
 const path = require('path');
 const fs = require('fs');
 
@@ -56,7 +56,7 @@ const securityMiddleware = (req, res, next) => {
     loginFailed: /login.*failed|authentication.*failed/i,
     tokenInvalid: /token.*invalid|jwt.*expired/i,
     rateLimit: /429|rate.*limit|too.*many/i,
-    injection: /<script>|javascript:|%3Cscript/i,
+    injection: /<script>|javascript:%3Cscript/i,
   };
   
   let securityEvent = null;
@@ -75,7 +75,7 @@ const securityMiddleware = (req, res, next) => {
     writeLog(entry);
     
     // Auto-bannir si trop d'échecs (5 tentatives/heure)
-    const hourlyLog = fs.readFileSync(path.join(__dirname, '../logs/security.log'), 'utf-8');
+    const hourlyLog = fs.readFileSync(path.join(__dirname, '../../logs/security.log'), 'utf-8');
     const hourlyEvents = hourlyLog.split('\n').filter(line => {
       try {
         const logEntry = JSON.parse(line);
