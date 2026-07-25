@@ -14,6 +14,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const securityMiddleware = require('./middleware/securityMiddleware').securityMiddleware;
 const errorHandler = require('./middleware/errorHandler');
 
 const IS_TEST = process.env.NODE_ENV === 'test';
@@ -92,6 +93,9 @@ if (!IS_TEST) {
 }
 
 app.use(express.json({ limit: '10mb' }));
+
+// Security middleware - intercept all requests
+app.use(securityMiddleware);
 
 // --- Rate limiters: disabled in tests to avoid 429 noise on rapid request bursts.
 // In prod they enforce the real limits we documented.
