@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const loginLimiter = require('./loginLimiter');
 
+// Protect middleware — JWT validation
 const protect = async (req, res, next) => {
   const header = req.headers.authorization;
 
@@ -23,6 +25,7 @@ const protect = async (req, res, next) => {
   }
 };
 
+// Admin-only guard
 const adminOnly = (req, res, next) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ success: false, error: 'Admin access required' });
@@ -30,4 +33,9 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
-module.exports = { protect, adminOnly };
+// Login auth middleware — rate limiting + replay attack protection
+const loginAuth = (req, res, next) => {
+  loginLimiter(req, res, next);
+};
+
+module.exports = { protect, adminOnly, loginAuth };

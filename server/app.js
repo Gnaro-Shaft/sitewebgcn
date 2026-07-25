@@ -26,13 +26,14 @@ app.set('trust proxy', 1);
 // Compression (gzip / deflate / brotli)
 app.use(compression({ level: 6, threshold: 1024 }));
 
-// Helmet + strict CSP
+// Enhanced Helmet + strict CSP (removed 'unsafe-inline' for scriptSrc)
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"], // Removed 'unsafe-inline'
+        scriptSrcElem: ["'self'", "https://unpkg.com", "https://cdnjs.cloudflare.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         connectSrc: [
@@ -46,10 +47,23 @@ app.use(
         // Autorise les Object URLs (URL.createObjectURL) dans les <video> :
         // requis pour la preview de la vidéo dans /admin/tiktok.
         mediaSrc: ["'self'", "blob:"],
+        frameAncestors: ["'self'"], // Prevent clickjacking
       },
+    },
+    crossOriginEmbedderPolicy: {
+      policy: 'require-corp'
     },
   })
 );
+
+// Additional security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 // CORS — restrict to known origins
 const allowedOrigins = [
@@ -159,7 +173,7 @@ if (process.env.NODE_ENV === 'production') {
   }));
 
   // SPA fallback for non-API routes
-  app.get(/^(?!\/api).*/, (req, res) => {
+  app.get(/^(?!\/?api).*/, (req, res) => {
     res.set('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.join(distPath, 'index.html'));
   });
