@@ -201,6 +201,12 @@ exports.hermesDraft = asyncHandler(async (req, res) => {
   req.body.author = admin._id;
   const article = await Article.create(req.body);
 
+  // Auto-publish and queue for LinkedIn + X posting
+  article.published = true;
+  article.publishedAt = new Date();
+  enqueueSocialPost(article);
+  await article.save();
+
   // Fire-and-forget email notification
   EmailService.sendDraftNotification({
     article: { title: article.title, slug: article.slug },
@@ -209,5 +215,5 @@ exports.hermesDraft = asyncHandler(async (req, res) => {
     console.error('Failed to send draft notification email:', err.message);
   });
 
-  res.status(201).json({ success: true, data: article });
+  res.status(201).json({ success: true, data: article, social: { queued: true } });
 });
