@@ -10,18 +10,22 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
-# Copy root package.json (backend deps)
+# Create non-root user first
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+# Copy root package.json (backend deps) as root, then install
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy backend code
-COPY server/ ./server/
+# Copy backend code and scripts with correct ownership
+COPY --chown=nodejs:nodejs server/ ./server/
+COPY --chown=nodejs:nodejs scripts/ ./scripts/
 
 # Copy built frontend
-COPY --from=frontend-build /app/client/dist ./client/dist
+COPY --from=frontend-build --chown=nodejs:nodejs /app/client/dist ./client/dist
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+# Create required directories for security middleware
+RUN mkdir -p /app/server/logs /app/logs && chown -R nodejs:nodejs /app/server/logs /app/logs
 
 # Set production environment
 ENV NODE_ENV=production
