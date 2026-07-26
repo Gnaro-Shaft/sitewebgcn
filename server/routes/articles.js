@@ -9,6 +9,7 @@ const {
   publishArticle,
   triggerSocialPublish,
   deleteArticle,
+  hermesDraft,
 } = require('../controllers/articleController');
 const { protect, adminOnly } = require('../middleware/auth');
 const { validateArticle } = require('../middleware/validate');
@@ -16,6 +17,7 @@ const { validateArticle } = require('../middleware/validate');
 // Admin (before :slug to avoid route conflict)
 router.get('/admin/all', protect, adminOnly, getAllArticles);
 router.post('/', protect, adminOnly, validateArticle, createArticle);
+router.post('/hermes-draft', hermesDraft);
 router.patch('/:id/publish', protect, adminOnly, publishArticle);
 router.post('/:id/social-publish', protect, adminOnly, triggerSocialPublish);
 router.patch('/:id', protect, adminOnly, updateArticle);

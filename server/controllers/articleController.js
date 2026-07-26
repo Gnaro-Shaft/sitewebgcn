@@ -180,3 +180,32 @@ exports.deleteArticle = asyncHandler(async (req, res) => {
 
   res.json({ success: true, data: {} });
 });
+
+// POST /api/articles/hermes-draft — cron-only, create draft from Hermes
+// Auth via X-Cron-Secret header (not JWT, no user session)
+exports.hermesDraft = asyncHandler(async (req, res) => {
+  const provided = req.headers['x-cron-secret'];
+  const expected = process.env.CRON_SECRET;
+  if (!expected || provided !== expected) {
+    return res.status(401).json({ success: false, error: 'Invalid cron secret' });
+  }
+
+  // Find an admin user to attribute the draft to
+  const admin = await User.findOne({ role: 'admin' });
+  if (!admin) {
+    return res.status(500).json({ success: false, error: 'No admin user found' });
+  }
+
+  req.body.author = admin._id;
+  const article = await Article.create(req.body);
+
+  // Fire-and-forget email notification
+  EmailService.sendDraftNotification({
+    article: { title: article.title, slug: article.slug },
+    activitySummary: { commitsAnalyzed: 0, reposTouched: [] },
+  }).catch((err) => {
+    console.error('Failed to send draft notification email:', err.message);
+  });
+
+  res.status(201).json({ success: true, data: article });
+});
