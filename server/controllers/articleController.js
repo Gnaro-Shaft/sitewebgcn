@@ -1,3 +1,5 @@
+const User = require("../models/User");
+const EmailService = require("../services/EmailService");
 const Article = require('../models/Article');
 const asyncHandler = require('../middleware/asyncHandler');
 
