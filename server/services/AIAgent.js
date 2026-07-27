@@ -2,6 +2,7 @@ const Anthropic = require('@anthropic-ai/sdk').default;
 const AIUsage = require('../models/AIUsage');
 const Project = require('../models/Project');
 const Article = require('../models/Article');
+const Conversation = require('../models/Conversation');
 
 // Claude Sonnet 4 pricing (USD per token)
 const MODEL = 'claude-sonnet-4-5';
@@ -128,7 +129,7 @@ async function fetchRecentGithubActivity({ user, sinceDays = 7 }) {
 }
 
 // Build context from user's recent activity
-async function buildContext() {
+async function buildContext(userId) {
   // Recent projects (public)
   const projects = await Project.find({ isPublic: true })
     .sort({ updatedAt: -1 })
@@ -140,6 +141,12 @@ async function buildContext() {
     .sort({ publishedAt: -1 })
     .limit(3)
     .select('title excerpt tags');
+
+  // Recent conversations (for personalization context)
+  let conversationContext = null;
+  if (userId) {
+    conversationContext = await fetchConversationContext({ userId });
+  }
 
   return {
     projects: projects.map((p) => ({
@@ -154,8 +161,42 @@ async function buildContext() {
       excerpt: a.excerpt,
       tags: a.tags,
     })),
+    conversationContext: conversationContext,
   };
 }
+
+// Fetch recent conversation context for AI personalization
+async function fetchConversationContext({ userId, limit = 5 }) {
+  if (!userId) return { conversations: [], context: null };
+
+  const conversations = await Conversation.find({
+    user: userId,
+    archived: false
+  })
+    .sort({ updatedAt: -1 })
+    .limit(limit)
+    .select('title summary tags type contextNotes updatedAt');
+
+  if (conversations.length === 0) {
+    return { conversations: [], context: null };
+  }
+
+  // Extract useful context from conversations
+  const context = conversations.map(c => c.extractAiContext());
+
+  return {
+    conversations: conversations.map(c => ({
+      title: c.title,
+      summary: c.summary,
+      tags: c.tags,
+      type: c.type,
+      updatedAt: c.updatedAt
+    })),
+    context: context,
+    totalConversations: await Conversation.countDocuments({ user: userId, archived: false })
+  };
+}
+
 
 // System prompt — shared across all generations
 const SYSTEM_PROMPT = `Tu es l'assistant redactionnel de Genaro-Cedric NISUS, developpeur fullstack et ingenieur IA en formation.
@@ -170,6 +211,7 @@ Style :
 - Phrases courtes, paragraphes courts
 - Pas de superlatifs vides ("incroyable", "revolutionnaire", "game-changer")
 - Parle de problemes reels, de tradeoffs, de ce qu'il a appris
+- Tire parti du contexte des conversations précédentes pour personnaliser le contenu
 
 Format de sortie :
 - Reponse en JSON uniquement, sans balises markdown autour
@@ -182,10 +224,10 @@ Format de sortie :
 Longueur cible : 600-1200 mots d'article.`;
 
 // Generate article from a topic (string)
-async function generateArticle({ topic, language = 'fr' }) {
+async function generateArticle({ topic, language = 'fr', userId }) {
   await checkBudget();
 
-  const context = await buildContext();
+  const context = await buildContext(userId);
 
   const userMessage = `Genere un article de blog sur le sujet suivant : "${topic}"
 
@@ -226,10 +268,10 @@ Langue : ${language === 'en' ? 'Anglais' : 'Francais'}.`;
 }
 
 // Suggest topics based on user's recent activity
-async function suggestTopics({ count = 3 }) {
+async function suggestTopics({ count = 3, userId }) {
   await checkBudget();
 
-  const context = await buildContext();
+  const context = await buildContext(userId);
 
   const userMessage = `En te basant sur les projets de Genaro-Cedric, propose ${count} sujets d'articles de blog tech qu'il pourrait ecrire.
 
@@ -272,14 +314,14 @@ Les sujets doivent :
 
 // Weekly auto-draft: Claude picks the best topic AND writes the article in
 // a single API call, based on the user's last 7 days of GitHub activity +
-// recent projects + existing articles (to avoid repeating).
+// recent projects + existing articles + conversation context (to avoid repeating).
 //
 // Returns: { article, costUsd, inputTokens, outputTokens, monthlySpent }
-async function generateWeeklyDraft({ githubUser, sinceDays = 7, language = 'fr' } = {}) {
+async function generateWeeklyDraft({ githubUser, sinceDays = 7, language = 'fr', userId } = {}) {
   await checkBudget();
 
   const [context, activity] = await Promise.all([
-    buildContext(),
+    buildContext(userId),
     fetchRecentGithubActivity({ user: githubUser, sinceDays }),
   ]);
 

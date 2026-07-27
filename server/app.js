@@ -153,6 +153,8 @@ app.use('/api/tiktok', require('./routes/tiktok'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/bot', require('./routes/bot'));
 app.use('/api/social', require('./routes/social'));
+app.use('/api/conversations', require('./routes/conversations'));
+app.use('/api/profile', require('./routes/profile'));
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {

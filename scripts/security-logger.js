@@ -25,15 +25,6 @@ const PATTERNS = {
   dataExport: /data.*export|download.*all|bulk.*export/i,
 };
 
-// Statistics tracking
-let stats = {
-  totalEvents: 0,
-  byType: {},
-  byIP: {},
-  byHour: {},
-  topViolators: [],
-};
-
 // Log entry structure
 function createLogEntry(ip, type, message, details = {}) {
   return {
@@ -69,6 +60,8 @@ function writeLog(entry) {
 }
 
 function rotateLogIfNecessary() {
+  if (!fs.existsSync(SECURITY_LOG)) return;
+  
   const logStats = fs.statSync(SECURITY_LOG);
   const logSizeMB = logStats.size / (1024 * 1024);
   
@@ -77,27 +70,27 @@ function rotateLogIfNecessary() {
     const { execSync } = require('child_process');
     execSync(`gzip -c ${SECURITY_LOG} > ${LOG_DIR}/${backupName}`);
     fs.writeFileSync(SECURITY_LOG, '');
-    console.log(`Rotated log to ${backupName}`);
   }
   
   // Clean old logs (keep 90 days)
-  const oldFiles = fs.readdirSync(LOG_DIR)
-    .filter(f => f.endsWith('.gz'))
-    .map(f => {
-      const dateStr = f.match(/security-(\d{4}-\d{2}-\d{2})\.gz/)?.[1];
-      return { file: f, date: dateStr };
-    })
-    .filter(f => f.date)
-    .filter(f => {
-      const fileDate = new Date(f.date);
-      const daysOld = (Date.now() - fileDate.getTime()) / (1000 * 60 * 60 * 24);
-      return daysOld > RETENTION_DAYS;
+  if (fs.existsSync(LOG_DIR)) {
+    const oldFiles = fs.readdirSync(LOG_DIR)
+      .filter(f => f.endsWith('.gz'))
+      .map(f => {
+        const dateStr = f.match(/security-(\d{4}-\d{2}-\d{2})\.gz/)?.[1];
+        return { file: f, date: dateStr };
+      })
+      .filter(f => f.date)
+      .filter(f => {
+        const fileDate = new Date(f.date);
+        const daysOld = (Date.now() - fileDate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysOld > RETENTION_DAYS;
+      });
+    
+    oldFiles.forEach(f => {
+      fs.unlinkSync(path.join(LOG_DIR, f.file));
     });
-  
-  oldFiles.forEach(f => {
-    fs.unlinkSync(path.join(LOG_DIR, f.file));
-    console.log(`Deleted old log: ${f.file}`);
-  });
+  }
 }
 
 function analyzeLog(filename = SECURITY_LOG) {
@@ -117,7 +110,7 @@ function analyzeLog(filename = SECURITY_LOG) {
   });
   
   // Calculate statistics
-  const results = {
+  const report = {
     total: entries.length,
     bySeverity: { HIGH: 0, MEDIUM: 0, LOW: 0 },
     byType: {},
@@ -130,47 +123,47 @@ function analyzeLog(filename = SECURITY_LOG) {
     if (entry.raw) return; // Skip invalid entries
     
     if (entry.severity) {
-      results.bySeverity[entry.severity] = (results.bySeverity[entry.severity] || 0) + 1;
+      report.bySeverity[entry.severity] = (report.bySeverity[entry.severity] || 0) + 1;
     }
     
     if (entry.type) {
-      results.byType[entry.type] = (results.byType[entry.type] || 0) + 1;
+      report.byType[entry.type] = (report.byType[entry.type] || 0) + 1;
     }
     
     if (entry.ip) {
-      results.topIPs.push(entry.ip);
+      report.topIPs.push(entry.ip);
     }
     
     if (entry.severity === 'HIGH') {
-      results.recentAlerts.push(entry);
+      report.recentAlerts.push(entry);
     }
   });
   
   // Find top offending IPs
   const ipCounts = {};
-  results.topIPs.forEach(ip => {
+  report.topIPs.forEach(ip => {
     ipCounts[ip] = (ipCounts[ip] || 0) + 1;
   });
   
-  results.topViolators = Object.entries(ipCounts)
+  report.topViolators = Object.entries(ipCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([ip, count]) => ({ ip, attempts: count }));
   
   // Generate recommendations
-  if (results.recentAlerts.length > 5) {
-    results.recommendations.push('Activer le bannissement automatique des IPs suspectes');
+  if (report.recentAlerts.length > 5) {
+    report.recommendations.push('Activer le bannissement automatique des IPs suspectes');
   }
   
-  if (results.byType['loginFailed'] > 100) {
-    results.recommendations.push('Vérifier si les emails de notification sont configurés pour les tentatives de connexion');
+  if (report.byType['loginFailed'] > 100) {
+    report.recommendations.push('Vérifier si les emails de notification sont configurés pour les tentatives de connexion');
   }
   
-  if (results.recentAlerts.length > 0) {
-    results.recommendations.push('Inspecter les alertes récentes dans le dashboard admin');
+  if (report.recentAlerts.length > 0) {
+    report.recommendations.push('Inspecter les alertes récentes dans le dashboard admin');
   }
   
-  return results;
+  return report;
 }
 
 function generateReport() {
@@ -200,23 +193,23 @@ function generateReport() {
     });
   }
   
-  if (results.topViolators.length > 0) {
+  if (report.topViolators && report.topViolators.length > 0) {
     console.log(`\n--- TOP OFFENDING IPS ---`);
-    results.topViolators.slice(0, 5).forEach(({ ip, attempts }) => {
+    report.topViolators.slice(0, 5).forEach(({ ip, attempts }) => {
       console.log(`${ip}: ${attempts} attempts`);
     });
   }
   
-  if (results.recentAlerts.length > 0) {
+  if (report.recentAlerts && report.recentAlerts.length > 0) {
     console.log(`\n--- RECENT HIGH SEVERITY ALERTS ---`);
-    results.recentAlerts.slice(0, 3).forEach(({ timestamp, ip, message }) => {
+    report.recentAlerts.slice(0, 3).forEach(({ timestamp, ip, message }) => {
       console.log(`[${timestamp}] ${ip}: ${message}`);
     });
   }
   
-  if (results.recommendations.length > 0) {
+  if (report.recommendations && report.recommendations.length > 0) {
     console.log(`\n--- RECOMMENDATIONS ---`);
-    results.recommendations.forEach(rec => {
+    report.recommendations.forEach(rec => {
       console.log(`• ${rec}`);
     });
   }
@@ -228,14 +221,14 @@ function generateReport() {
 
 function exportAlerts(outputFile = 'security-alerts.json') {
   const report = analyzeLog();
-  const alerts = report.recentAlerts;
+  const alerts = report.recentAlerts || [];
   
   const exportData = {
     generated: new Date().toISOString(),
     summary: {
       totalAlerts: alerts.length,
       highSeverity: report.bySeverity.HIGH,
-      topViolators: results.topViolators.slice(0, 10)
+      topViolators: report.topViolators ? report.topViolators.slice(0, 10) : []
     },
     alerts: alerts
   };

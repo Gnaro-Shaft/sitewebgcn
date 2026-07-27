@@ -27,6 +27,73 @@ const userSchema = new mongoose.Schema(
       of: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    // Profil utilisateur pour personnalisation
+    profile: {
+      bio: {
+        type: String,
+        maxlength: 1000,
+      },
+      writingStyle: {
+        type: {
+          tone: {
+            type: String,
+            enum: ['pedagogique', 'technique', 'personnel', 'professionnel'],
+            default: 'pedagogique',
+          },
+          perspective: {
+            type: String,
+            enum: ['first-person', 'third-person'],
+            default: 'first-person',
+          },
+          audience: {
+            type: String,
+            enum: ['developers', 'managers', 'general', 'beginners', 'experts'],
+            default: 'developers',
+          },
+          language: {
+            type: String,
+            default: 'fr',
+          },
+        },
+        default: {},
+      },
+      preferences: {
+        // Préférences pour la génération d'articles
+        articleLength: {
+          type: String,
+          enum: ['short', 'medium', 'long'],
+          default: 'medium',
+        },
+        includeCodeExamples: {
+          type: Boolean,
+          default: true,
+        },
+        autoGenerateTags: {
+          type: Boolean,
+          default: true,
+        },
+        // Thèmes d'intérêt pour suggestions
+        interests: {
+          type: [String],
+          default: [],
+        },
+        // GitHub / tech stack pour contexte
+        githubUsername: {
+          type: String,
+          default: '',
+        },
+        techStack: {
+          type: [String],
+          default: [],
+        },
+      },
+      // Historique des préférences d'articles (pour apprentissage)
+      articleHistory: {
+        type: Map,
+        of: mongoose.Schema.Types.Mixed,
+        default: {},
+      },
+    },
   },
   { timestamps: true }
 );
