@@ -63,6 +63,14 @@ const articleSchema = new mongoose.Schema(
         error: String,
       },
     },
+    // Anciens slugs conservés pour rediriger en 301 vers le slug courant.
+    // Sans ça, corriger la slugification casse tous les liens déjà partagés
+    // sur LinkedIn et déjà indexés par Google.
+    oldSlugs: {
+      type: [String],
+      default: [],
+      index: true,
+    },
     views: {
       type: Number,
       default: 0,
@@ -76,14 +84,25 @@ const articleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Translittère un titre en slug lisible.
+// Le `normalize('NFD')` décompose les caractères accentués en (lettre + accent),
+// puis on retire les accents — sans ça « déployer » devenait « d-ployer » et
+// chaque mot-clé français était détruit dans l'URL.
+function slugify(title) {
+  return String(title)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 // Auto-generate slug from title if not provided
 articleSchema.pre('save', async function () {
   if (!this.isModified('title') && this.slug) return;
 
-  let slug = this.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  const previousSlug = this.slug;
+  let slug = slugify(this.title);
 
   // Ensure unique slug
   const existing = await mongoose.model('Article').findOne({ slug, _id: { $ne: this._id } });
@@ -91,7 +110,15 @@ articleSchema.pre('save', async function () {
     slug = `${slug}-${Date.now()}`;
   }
 
+  // Le slug change sur un article déjà publié → on garde l'ancien pour le 301
+  if (previousSlug && previousSlug !== slug && !this.oldSlugs.includes(previousSlug)) {
+    this.oldSlugs.push(previousSlug);
+  }
+
   this.slug = slug;
 });
+
+// Exposé pour les tests et le script de migration
+articleSchema.statics.slugify = slugify;
 
 module.exports = mongoose.model('Article', articleSchema);

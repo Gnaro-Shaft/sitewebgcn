@@ -78,6 +78,19 @@ exports.getArticleBySlug = asyncHandler(async (req, res) => {
   );
 
   if (!article) {
+    // L'article n'existe pas sous ce slug — peut-être un ancien slug d'avant
+    // la correction de la translittération. On répond alors avec le slug
+    // courant pour que le client redirige, plutôt que d'afficher un 404 sur
+    // un lien déjà partagé sur LinkedIn ou indexé par Google.
+    const renamed = await Article.findOne({ oldSlugs: req.params.slug, published: true })
+      .select('slug');
+    if (renamed) {
+      return res.status(301).json({
+        success: false,
+        error: 'Article moved',
+        movedTo: renamed.slug,
+      });
+    }
     return res.status(404).json({ success: false, error: 'Article not found' });
   }
 
