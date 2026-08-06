@@ -172,6 +172,11 @@ if (process.env.NODE_ENV === 'production') {
 
   app.use(express.static(distPath, {
     maxAge: '1d',
+    // index: false est indispensable. Par défaut express.static sert
+    // index.html pour "/" et court-circuite le handler ci-dessous, si bien
+    // que la page d'accueil était la seule à ne recevoir ni lien canonique
+    // ni donnée structurée. On laisse le fallback traiter toutes les routes.
+    index: false,
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('index.html')) {
         res.setHeader('Cache-Control', 'no-cache, must-revalidate');

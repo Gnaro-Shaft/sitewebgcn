@@ -223,6 +223,26 @@ describe('jsonLd', () => {
   });
 });
 
+describe("régression — la page d'accueil doit être traitée comme les autres", () => {
+  // express.static sert index.html pour "/" par défaut, ce qui court-circuitait
+  // le fallback : l'accueil était la seule page sans lien canonique ni donnée
+  // structurée, alors que son titre semblait correct (c'est celui du template).
+  // Corrigé par `index: false` sur express.static.
+  it('staticMetaFor("/") fournit bien canonical et JSON-LD', () => {
+    const meta = staticMetaFor('/');
+    expect(meta).not.toBeNull();
+    expect(meta.url).toBe(SITE_URL);
+    expect(meta.jsonLd['@type']).toBe('Person');
+  });
+
+  it("le HTML de l'accueil contient canonical et le bloc ld+json", () => {
+    const html = injectMeta(TEMPLATE, staticMetaFor('/'));
+    expect(html).toContain(`<link rel="canonical" href="${SITE_URL}" />`);
+    expect(html).toContain('application/ld+json');
+    expect(html).toContain('"@type":"Person"');
+  });
+});
+
 describe('scénario complet — un article partagé sur LinkedIn', () => {
   it('produit un HTML dont les métadonnées décrivent l\'article, pas le portfolio', () => {
     const article = {
