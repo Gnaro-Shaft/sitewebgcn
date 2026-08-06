@@ -8,6 +8,7 @@ if (process.env.NODE_ENV !== 'test') {
   require('dotenv').config({ override: true });
 }
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -178,10 +179,50 @@ if (process.env.NODE_ENV === 'production') {
     },
   }));
 
-  // SPA fallback for non-API routes
-  app.get(/^(?!\/?api).*/, (req, res) => {
+  // SPA fallback for non-API routes, avec injection des métadonnées.
+  //
+  // Les robots sociaux n'exécutent pas de JavaScript : sans cette étape ils
+  // reçoivent le même <title> et les mêmes og:* sur toutes les routes, et
+  // chaque article partagé sur LinkedIn affiche l'aperçu du portfolio.
+  const pageMeta = require('./services/pageMeta');
+  const Article = require('./models/Article');
+  const indexPath = path.join(distPath, 'index.html');
+
+  // Template lu une seule fois puis gardé en mémoire — pas d'I/O disque
+  // dans le chemin critique de chaque page.
+  let template = null;
+  function getTemplate() {
+    if (template === null) template = fs.readFileSync(indexPath, 'utf8');
+    return template;
+  }
+
+  app.get(/^(?!\/?api).*/, async (req, res) => {
     res.set('Cache-Control', 'no-cache, must-revalidate');
-    res.sendFile(path.join(distPath, 'index.html'));
+
+    try {
+      const pathname = req.path;
+      let meta = pageMeta.staticMetaFor(pathname);
+
+      // Article de blog : on résout le titre et l'extrait réels.
+      const articleMatch = pathname.match(/^\/blog\/([^/]+)\/?$/);
+      if (!meta && articleMatch) {
+        const slug = decodeURIComponent(articleMatch[1]);
+        const article = await Article.findOne({ slug, published: true })
+          .select('title excerpt slug tags publishedAt updatedAt createdAt')
+          .lean();
+        if (article) meta = pageMeta.articleMetaFrom(article);
+      }
+
+      if (meta) {
+        return res.type('html').send(pageMeta.injectMeta(getTemplate(), meta));
+      }
+    } catch (err) {
+      // Base injoignable ou template illisible : on ne casse pas la page,
+      // on retombe sur le fichier statique tel quel.
+      console.error('[pageMeta] injection ignorée:', err.message);
+    }
+
+    res.sendFile(indexPath);
   });
 }
 
