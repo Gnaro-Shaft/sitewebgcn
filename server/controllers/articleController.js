@@ -3,13 +3,20 @@ const EmailService = require("../services/EmailService");
 const Article = require('../models/Article');
 const asyncHandler = require('../middleware/asyncHandler');
 
+// Plateformes réellement consommées par un workflow n8n.
+// X reste écarté par décision assumée (coût de l'API, cf. roadmap) : on
+// l'enfilait quand même, si bien que les entrées s'accumulaient en `queued`
+// sans que rien ne les traite. Le champ reste dans le schéma pour le jour
+// où un workflow X existera.
+const QUEUED_PLATFORMS = ['linkedin'];
+
 // Helper: mark the LinkedIn + X status for an article and return a diff of
 // what changed. Callers save the article themselves. Deliberately keeps
 // state changes explicit so the controller reads linearly.
 function enqueueSocialPost(article) {
   const now = new Date();
   article.socialPosted = article.socialPosted || {};
-  ['linkedin', 'x'].forEach((platform) => {
+  QUEUED_PLATFORMS.forEach((platform) => {
     const current = article.socialPosted[platform] || {};
     // Only queue if not already queued/posted — no double-queueing.
     if (current.status === 'posted') return;

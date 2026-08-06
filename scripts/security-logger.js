@@ -263,6 +263,11 @@ function checkBlockList(ip) {
 }
 
 // CLI entry point
+// Ne s'exécute que lorsque le fichier est lancé directement.
+// Sans cette garde, le simple `require()` depuis securityMiddleware
+// déclenchait la branche `else` et imprimait le mode d'emploi dans les
+// logs de production à chaque démarrage du serveur.
+if (require.main === module) {
 const args = process.argv.slice(2);
 
 if (args[0] === 'analyze') {
@@ -281,4 +286,5 @@ if (args[0] === 'analyze') {
   console.log('  node security-logger.js block <ip>   # Manually block IP');
   console.log('  node security-logger.js check <ip>   # Check if IP is blocked');
   console.log('\nLog file is automatically rotated and cleaned (90-day retention)');
+}
 }

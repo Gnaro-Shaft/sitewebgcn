@@ -72,7 +72,9 @@ describe('Article publish flow', () => {
     expect(publish.body.social).toEqual({ queued: true });
     expect(publish.body.data.socialPosted.linkedin.status).toBe('queued');
     expect(publish.body.data.socialPosted.linkedin.queuedAt).toBeTruthy();
-    expect(publish.body.data.socialPosted.x.status).toBe('queued');
+    // X n'est plus mis en file : aucun workflow ne le consomme, les entrées
+    // s'accumulaient indéfiniment en 'queued'. Le champ reste dans le schéma.
+    expect(publish.body.data.socialPosted.x.status).toBe('pending');
 
     // 5. Now appears on the public list, with content
     const publicListAfter = await request(app).get('/api/articles');
