@@ -13,6 +13,7 @@ import BlogAIWidget from '../components/widgets/BlogAIWidget';
 import AnalyticsWidget from '../components/widgets/AnalyticsWidget';
 import BotStatusWidget from '../components/widgets/BotStatusWidget';
 import DecisionLogWidget from '../components/widgets/DecisionLogWidget';
+import GnaroDraftsWidget from '../components/widgets/GnaroDraftsWidget';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
 
@@ -27,6 +28,7 @@ const DEFAULT_WIDGETS = [
   { id: 'performance', label: 'Algo Performance', enabled: true },
   { id: 'signals', label: 'Signals', enabled: true },
   { id: 'decisions', label: 'Decision Log', enabled: true },
+  { id: 'gnaroDrafts', label: 'gnaro.fr', enabled: true },
 ];
 
 const WIDGET_COMPONENTS = {
@@ -40,6 +42,7 @@ const WIDGET_COMPONENTS = {
   performance: PerformanceWidget,
   signals: SignalsWidget,
   decisions: DecisionLogWidget,
+  gnaroDrafts: GnaroDraftsWidget,
 };
 
 export default function Dashboard() {

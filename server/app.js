@@ -156,6 +156,7 @@ app.use('/api/bot', require('./routes/bot'));
 app.use('/api/social', require('./routes/social'));
 app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/profile', require('./routes/profile'));
+app.use('/api/gnaro', require('./routes/gnaro'));
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {

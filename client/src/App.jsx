@@ -18,6 +18,7 @@ const BlogPage = lazy(() => import('./pages/BlogPage'));
 const ArticlePage = lazy(() => import('./pages/ArticlePage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDrafts = lazy(() => import('./pages/AdminDrafts'));
+const AdminGnaro = lazy(() => import('./pages/AdminGnaro'));
 const AdminProjects = lazy(() => import('./pages/AdminProjects'));
 const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
 const TikTokStudio = lazy(() => import('./pages/TikTokStudio'));
@@ -67,6 +68,14 @@ export default function App() {
               <Route path="/admin/drafts" element={
                 <ProtectedRoute>
                   <AdminDrafts />
+                </ProtectedRoute>
+              } />
+
+              {/* Brouillons du site gnaro.fr — stockés dans son dépôt Git,
+                  pas en base : voir server/services/gnaroRepo.js */}
+              <Route path="/admin/gnaro" element={
+                <ProtectedRoute>
+                  <AdminGnaro />
                 </ProtectedRoute>
               } />
 
