@@ -31,7 +31,13 @@ async function seedAdmin() {
   return reg.body.user.id;
 }
 
-async function seedQueuedArticle({ title = 'Queued', content = '# T\n\nBody', slug = 'queued' } = {}) {
+async function seedQueuedArticle({
+  title = 'Queued',
+  content = '# T\n\nBody',
+  slug = 'queued',
+  text = 'Un texte de post écrit à la main, assez long pour passer la validation serveur.',
+  firstComment = 'https://gcn-data.fr/blog/queued',
+} = {}) {
   const Article = require('../../models/Article');
   const authorId = await seedAdmin();
   return Article.create({
@@ -44,7 +50,7 @@ async function seedQueuedArticle({ title = 'Queued', content = '# T\n\nBody', sl
     publishedAt: new Date(),
     author: authorId,
     socialPosted: {
-      linkedin: { status: 'queued', queuedAt: new Date() },
+      linkedin: { status: 'queued', queuedAt: new Date(), text, firstComment },
       x: { status: 'pending' },
     },
   });
@@ -72,11 +78,14 @@ describe('GET /api/social/pending', () => {
     expect(res.body.data).toEqual([]);
   });
 
-  it('returns queued articles with pre-built LinkedIn payload', async () => {
+  it('serves the hand-written text verbatim, without deriving it from the article', async () => {
+    const handWritten = "J'ai perdu deux jours sur un index Mongo que je croyais utilisé. Il ne l'était pas.";
     const article = await seedQueuedArticle({
       title: 'AB test embeddings',
       content: '# Intro\n\nWe A/B tested **bge-m3** and got 90% Hit@1.',
       slug: 'ab-test-embeddings',
+      text: handWritten,
+      firstComment: 'https://gcn-data.fr/blog/ab-test-embeddings',
     });
 
     const res = await request(app).get('/api/social/pending?platform=linkedin').set(AUTH);
@@ -87,13 +96,35 @@ describe('GET /api/social/pending', () => {
     expect(item.articleId).toBe(String(article._id));
     expect(item.slug).toBe('ab-test-embeddings');
     expect(item.title).toBe('AB test embeddings');
-    expect(item.text).toContain('Intro');
-    expect(item.text).toContain('bge-m3');
-    // No URL in the post body
-    expect(item.text).not.toContain('/blog/');
-    // First comment contains the URL
-    expect(item.firstComment).toContain('/blog/ab-test-embeddings');
+
+    // Le texte servi est EXACTEMENT celui qui a été écrit — aucun ajout,
+    // aucune tagline, aucun emprunt au contenu de l'article.
+    expect(item.text).toBe(handWritten);
+    expect(item.text).not.toContain('bge-m3');
+    expect(item.text).not.toContain('🔽');
+
+    expect(item.firstComment).toBe('https://gcn-data.fr/blog/ab-test-embeddings');
     expect(item.url).toContain('/blog/ab-test-embeddings');
+  });
+
+  // Garde-fou : sans ce filtre, n8n recevrait text=null et posterait la
+  // chaîne "null" sur LinkedIn. Cas possible pour une entrée enfilée avant
+  // que le texte devienne obligatoire.
+  it('skips a queued article that has no composed text', async () => {
+    const authorId = await seedAdmin();
+    const Article = require('../../models/Article');
+    await Article.create({
+      title: 'Legacy queued',
+      slug: 'legacy-queued',
+      content: 'c',
+      author: authorId,
+      published: true,
+      socialPosted: { linkedin: { status: 'queued', queuedAt: new Date() } },
+    });
+
+    const res = await request(app).get('/api/social/pending?platform=linkedin').set(AUTH);
+    expect(res.body.count).toBe(0);
+    expect(res.body.data).toEqual([]);
   });
 
   it('does not return articles with status posted or pending', async () => {
@@ -132,7 +163,11 @@ describe('GET /api/social/pending', () => {
       author: authorId,
       published: true,
       socialPosted: {
-        linkedin: { status: 'queued', queuedAt: new Date('2026-06-01T00:00:00Z') },
+        linkedin: {
+          status: 'queued',
+          queuedAt: new Date('2026-06-01T00:00:00Z'),
+          text: 'Texte du post le plus ancien, écrit à la main dans le composeur.',
+        },
       },
     });
     const newer = await Article.create({
@@ -142,7 +177,11 @@ describe('GET /api/social/pending', () => {
       author: authorId,
       published: true,
       socialPosted: {
-        linkedin: { status: 'queued', queuedAt: new Date('2026-07-01T00:00:00Z') },
+        linkedin: {
+          status: 'queued',
+          queuedAt: new Date('2026-07-01T00:00:00Z'),
+          text: 'Texte du post le plus récent, écrit à la main dans le composeur.',
+        },
       },
     });
 

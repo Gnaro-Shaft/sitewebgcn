@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import Markdown from 'react-markdown';
 import api from '../api/axios';
+import LinkedInComposer from '../components/admin/LinkedInComposer';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminDrafts() {
@@ -13,6 +14,7 @@ export default function AdminDrafts() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [composing, setComposing] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const fetchArticles = useCallback(() => {
@@ -51,20 +53,24 @@ export default function AdminDrafts() {
     }
   };
 
-  const handleSocialPublish = async (id) => {
+  // Enfile le post écrit dans le composeur. La réponse ne dit PAS que le post
+  // est en ligne — n8n interroge la file toutes les 5 min et poste ensuite.
+  // L'ancien message affichait « Echec » en permanence : il lisait un champ
+  // `results.linkedin.success` que le serveur n'a jamais renvoyé.
+  const handleSocialPublish = async ({ text, firstComment }) => {
+    if (!composing) return;
     setSaving(true);
     try {
-      const res = await api.post(`/articles/${id}/social-publish`);
+      const res = await api.post(`/articles/${composing._id}/social-publish`, {
+        text,
+        firstComment,
+      });
       fetchArticles();
-      if (selected?._id === id && res.data.data?.article) {
+      if (selected?._id === composing._id && res.data.data?.article) {
         setSelected(res.data.data.article);
       }
-      const r = res.data.data?.results || {};
-      const linkedinOk = r.linkedin?.success;
-      const linkedinSkipped = r.linkedin?.skipped;
-      alert(
-        `LinkedIn: ${linkedinOk ? 'OK' : linkedinSkipped ? 'Non configure' : 'Echec'}`
-      );
+      setComposing(null);
+      alert(t('drafts.linkedin.queued'));
     } catch (err) {
       alert('Erreur: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -134,7 +140,7 @@ export default function AdminDrafts() {
               ) : (
                 <div className="space-y-2">
                   {drafts.map((a) => (
-                    <ArticleItem key={a._id} article={a} selected={selected?._id === a._id} onClick={() => { setSelected(a); setEditing(null); }} />
+                    <ArticleItem key={a._id} article={a} selected={selected?._id === a._id} onClick={() => { setSelected(a); setEditing(null); setComposing(null); }} />
                   ))}
                 </div>
               )}
@@ -149,7 +155,7 @@ export default function AdminDrafts() {
               ) : (
                 <div className="space-y-2">
                   {published.map((a) => (
-                    <ArticleItem key={a._id} article={a} selected={selected?._id === a._id} onClick={() => { setSelected(a); setEditing(null); }} />
+                    <ArticleItem key={a._id} article={a} selected={selected?._id === a._id} onClick={() => { setSelected(a); setEditing(null); setComposing(null); }} />
                   ))}
                 </div>
               )}
@@ -171,12 +177,20 @@ export default function AdminDrafts() {
                 saving={saving}
                 t={t}
               />
+            ) : composing ? (
+              <LinkedInComposer
+                article={composing}
+                onCancel={() => setComposing(null)}
+                onSubmit={handleSocialPublish}
+                saving={saving}
+                t={t}
+              />
             ) : (
               <PreviewMode
                 article={selected}
                 onEdit={() => setEditing({ ...selected })}
                 onPublishToggle={() => handlePublishToggle(selected._id)}
-                onSocialPublish={() => handleSocialPublish(selected._id)}
+                onSocialPublish={() => setComposing(selected)}
                 onDelete={() => handleDelete(selected._id)}
                 saving={saving}
                 t={t}
@@ -279,13 +293,13 @@ function PreviewMode({ article, onEdit, onPublishToggle, onSocialPublish, onDele
             <button
               onClick={onSocialPublish}
               disabled={saving}
-              title="Re-poster sur les reseaux sociaux"
+              title={t('drafts.linkedin.composeHint')}
               className="px-3 py-1.5 text-sm border border-blue-500 text-blue-500 hover:bg-blue-500/10 rounded-lg font-medium transition-all disabled:opacity-40 flex items-center gap-1.5"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              Re-publier
+              {t('drafts.linkedin.compose')}
             </button>
           )}
           <button

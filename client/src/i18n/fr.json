@@ -55,7 +55,7 @@
       "githubTip": "GitHub API pour : heatmap de contributions, skills dynamiques (langages + dépendances), import semi-auto des projets dans la DB.",
       "hyperTip": "Hyperliquid DEX API pour récupérer les positions ouvertes et le PnL en temps réel sur le widget Trades du dashboard.",
       "makeTip": "Webhook générique → Make.com → LinkedIn. Choisi pour éviter l'API LinkedIn directe (review obligatoire de plusieurs semaines). Migration n8n self-hosted prévue plus tard.",
-      "linkedinTip": "Auto-publish à chaque article publié. Le post inclut titre, excerpt, lien et tags. Anti-duplicate géré par LinkedIn lui-même.",
+      "linkedinTip": "Plus d'auto-publish : publier un article ne poste rien. Le texte du post est écrit à la main dans le tableau de bord, puis mis en file. n8n l'envoie tel quel.",
       "hoverHint": "↑ Survole les blocs pour voir le détail de chaque composant"
     },
     "decisions": {
@@ -378,7 +378,21 @@
     "publish": "Publier",
     "unpublish": "Dépublier",
     "delete": "Supprimer",
-    "deleteConfirm": "Supprimer definitivement cet article ?"
+    "deleteConfirm": "Supprimer definitivement cet article ?",
+    "linkedin": {
+      "compose": "Écrire le post",
+      "composeHint": "Rédiger le post LinkedIn et l'envoyer dans la file",
+      "title": "Post LinkedIn",
+      "textLabel": "Texte du post",
+      "textPlaceholder": "Une idée, la tienne. Pas le résumé de l'article.",
+      "tooShort": "Encore un peu court — minimum {{min}} caractères.",
+      "tooLong": "Trop long — maximum {{max}} caractères.",
+      "commentLabel": "Premier commentaire (optionnel)",
+      "commentPlaceholder": "Laisser vide pour le lien seul",
+      "commentHelp": "Vide = l'URL de l'article, sans formule d'accompagnement.",
+      "send": "Mettre en file",
+      "queued": "Post mis en file. n8n l'enverra sous 5 minutes."
+    }
   },
   "notFound": {
     "title": "Page introuvable",

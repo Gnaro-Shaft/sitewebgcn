@@ -55,7 +55,7 @@
       "githubTip": "GitHub API for: contribution heatmap, dynamic skills (languages + dependencies), semi-auto project import to DB.",
       "hyperTip": "Hyperliquid DEX API for fetching open positions and live PnL on the dashboard's Trades widget.",
       "makeTip": "Generic webhook → Make.com → LinkedIn. Chosen to avoid the direct LinkedIn API (mandatory weeks-long review). n8n self-host migration planned.",
-      "linkedinTip": "Auto-publish on every published article. Post includes title, excerpt, link and tags. Anti-duplicate handled by LinkedIn itself.",
+      "linkedinTip": "No more auto-publish: publishing an article posts nothing. The post text is written by hand in the dashboard, then queued. n8n sends it as-is.",
       "hoverHint": "↑ Hover the boxes for component details"
     },
     "decisions": {
@@ -378,7 +378,21 @@
     "publish": "Publish",
     "unpublish": "Unpublish",
     "delete": "Delete",
-    "deleteConfirm": "Permanently delete this article?"
+    "deleteConfirm": "Permanently delete this article?",
+    "linkedin": {
+      "compose": "Write the post",
+      "composeHint": "Write the LinkedIn post and send it to the queue",
+      "title": "LinkedIn post",
+      "textLabel": "Post text",
+      "textPlaceholder": "One idea, yours. Not a summary of the article.",
+      "tooShort": "Still a bit short — {{min}} characters minimum.",
+      "tooLong": "Too long — {{max}} characters maximum.",
+      "commentLabel": "First comment (optional)",
+      "commentPlaceholder": "Leave empty for the link alone",
+      "commentHelp": "Empty = the article URL, with no accompanying formula.",
+      "send": "Add to queue",
+      "queued": "Post queued. n8n will send it within 5 minutes."
+    }
   },
   "notFound": {
     "title": "Page not found",

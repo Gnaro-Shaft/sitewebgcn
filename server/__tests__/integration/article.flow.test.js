@@ -62,18 +62,19 @@ describe('Article publish flow', () => {
     expect(adminList.status).toBe(200);
     expect(adminList.body.data).toHaveLength(1);
 
-    // 4. Publish flips the LinkedIn+X status to 'queued'
+    // 4. Publier met l'article en ligne et n'enfile RIEN sur LinkedIn.
+    // C'est le cœur du changement : tant que publier déclenchait le post,
+    // la forme du post était forcément produite par une machine.
     const publish = await request(app)
       .patch(`/api/articles/${articleId}/publish`)
       .set('Authorization', `Bearer ${token}`);
     expect(publish.status).toBe(200);
     expect(publish.body.data.published).toBe(true);
     expect(publish.body.data.publishedAt).toBeTruthy();
-    expect(publish.body.social).toEqual({ queued: true });
-    expect(publish.body.data.socialPosted.linkedin.status).toBe('queued');
-    expect(publish.body.data.socialPosted.linkedin.queuedAt).toBeTruthy();
-    // X n'est plus mis en file : aucun workflow ne le consomme, les entrées
-    // s'accumulaient indéfiniment en 'queued'. Le champ reste dans le schéma.
+    expect(publish.body.social).toBeNull();
+    expect(publish.body.data.socialPosted.linkedin.status).toBe('pending');
+    expect(publish.body.data.socialPosted.linkedin.queuedAt).toBeFalsy();
+    expect(publish.body.data.socialPosted.linkedin.text).toBeFalsy();
     expect(publish.body.data.socialPosted.x.status).toBe('pending');
 
     // 5. Now appears on the public list, with content
@@ -108,7 +109,7 @@ describe('Article publish flow', () => {
     expect(res.status).toBe(401);
   });
 
-  it('republishing does NOT re-queue when already posted (avoids LinkedIn duplicate)', async () => {
+  it('republishing never queues, whatever the number of publish toggles', async () => {
     const { token } = await registerAdmin();
 
     const created = await request(app)
@@ -117,36 +118,121 @@ describe('Article publish flow', () => {
       .send({ title: 'No double post', content: 'content' });
     const id = created.body.data._id;
 
-    // First publish — queues both platforms
-    const firstPublish = await request(app)
+    // Publier, dépublier, republier — aucun de ces gestes n'enfile.
+    for (let i = 0; i < 3; i += 1) {
+      const res = await request(app)
+        .patch(`/api/articles/${id}/publish`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.body.social).toBeNull();
+      expect(res.body.data.socialPosted.linkedin.status).toBe('pending');
+    }
+  });
+});
+
+// Le seul chemin qui met un article dans la file LinkedIn : le composeur.
+describe('POST /api/articles/:id/social-publish', () => {
+  const TEXT = "J'ai perdu deux jours sur un index Mongo que je croyais utilisé. Il ne l'était pas.";
+
+  async function publishedArticle(token, title = 'Composable') {
+    const created = await request(app)
+      .post('/api/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title, content: 'content' });
+    const id = created.body.data._id;
+    await request(app)
       .patch(`/api/articles/${id}/publish`)
       .set('Authorization', `Bearer ${token}`);
-    expect(firstPublish.body.social).toEqual({ queued: true });
+    return id;
+  }
 
-    // Simulate n8n picking up the article and marking it as posted.
+  it('refuses to queue without a text', async () => {
+    const { token } = await registerAdmin();
+    const id = await publishedArticle(token);
+
+    const res = await request(app)
+      .post(`/api/articles/${id}/social-publish`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('refuses a text that is only whitespace', async () => {
+    const { token } = await registerAdmin();
+    const id = await publishedArticle(token);
+
+    const res = await request(app)
+      .post(`/api/articles/${id}/social-publish`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: '   \n\t  ' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('refuses to queue an unpublished article even with a valid text', async () => {
+    const { token } = await registerAdmin();
+    const created = await request(app)
+      .post('/api/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Still a draft', content: 'content' });
+
+    const res = await request(app)
+      .post(`/api/articles/${created.body.data._id}/social-publish`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: TEXT });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('queues the hand-written text verbatim', async () => {
+    const { token } = await registerAdmin();
+    const id = await publishedArticle(token);
+
+    const res = await request(app)
+      .post(`/api/articles/${id}/social-publish`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: TEXT, firstComment: 'https://gcn-data.fr/blog/composable' });
+
+    expect(res.status).toBe(200);
+    const linkedin = res.body.data.article.socialPosted.linkedin;
+    expect(linkedin.status).toBe('queued');
+    expect(linkedin.queuedAt).toBeTruthy();
+    expect(linkedin.text).toBe(TEXT);
+    expect(linkedin.firstComment).toBe('https://gcn-data.fr/blog/composable');
+  });
+
+  it('falls back to the bare canonical URL when the comment is left empty', async () => {
+    const { token } = await registerAdmin();
+    const id = await publishedArticle(token);
+
+    const res = await request(app)
+      .post(`/api/articles/${id}/social-publish`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: TEXT, firstComment: '  ' });
+
+    expect(res.status).toBe(200);
+    const { firstComment } = res.body.data.article.socialPosted.linkedin;
+    expect(firstComment).toContain('/blog/composable');
+    // Une URL nue : pas d'emoji, pas de formule qui se répète de post en post.
+    expect(firstComment).toMatch(/^https?:\/\/\S+$/);
+  });
+
+  it('refuses to re-queue an article already posted on LinkedIn', async () => {
+    const { token } = await registerAdmin();
+    const id = await publishedArticle(token);
+
     const Article = require('../../models/Article');
     await Article.updateOne(
       { _id: id },
-      {
-        $set: {
-          'socialPosted.linkedin.status': 'posted',
-          'socialPosted.linkedin.postedAt': new Date(),
-          'socialPosted.linkedin.postUrn': 'urn:li:share:fake',
-        },
-      }
+      { $set: { 'socialPosted.linkedin.status': 'posted', 'socialPosted.linkedin.postUrn': 'urn:li:share:fake' } }
     );
 
-    // Unpublish then republish — should NOT re-queue (LinkedIn already has it)
-    await request(app)
-      .patch(`/api/articles/${id}/publish`)
-      .set('Authorization', `Bearer ${token}`); // unpublish
-    const republish = await request(app)
-      .patch(`/api/articles/${id}/publish`)
-      .set('Authorization', `Bearer ${token}`); // republish
+    const res = await request(app)
+      .post(`/api/articles/${id}/social-publish`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: TEXT });
 
-    expect(republish.body.social).toBeNull();
-    // LinkedIn status is preserved as 'posted' (not overwritten back to 'queued')
-    expect(republish.body.data.socialPosted.linkedin.status).toBe('posted');
-    expect(republish.body.data.socialPosted.linkedin.postUrn).toBe('urn:li:share:fake');
+    expect(res.status).toBe(409);
   });
 });

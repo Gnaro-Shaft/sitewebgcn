@@ -5,6 +5,21 @@ sur homeserv01 en Tailscale-only, poll `gcn-data.fr/api/social/pending`
 toutes les 5 min, poste sur LinkedIn + commente avec le lien blog, puis
 notifie Fly du succès.
 
+> **Ce que n8n poste depuis août 2026.** Le workflow est inchangé — il lit
+> toujours `{ text, firstComment }` sur `/api/social/pending`. Ce qui a
+> changé est en amont : ces deux champs ne sont plus construits à partir de
+> l'article. Ils sont **écrits à la main** dans le composeur du tableau de
+> bord (`/admin/drafts` → un article publié → « Écrire le post »), et c'est
+> le seul geste qui met quelque chose dans la file.
+>
+> Publier un article n'enfile plus rien, et le brouillon hebdomadaire du
+> cron non plus. Motif : le texte était le début de l'article suivi d'une
+> tagline constante, donc chaque post avait la même forme. La portée est
+> tombée de 759 à 28 impressions au fil de la série.
+>
+> Conséquence pratique : **une file vide est le cas nominal**. Si tu ne vois
+> rien partir, ce n'est pas une panne.
+
 **Prérequis :**
 - Ubuntu + Docker + docker compose plugin ✓ (déjà en place)
 - Tailscale installé et enrôlé ✓ (déjà en place)

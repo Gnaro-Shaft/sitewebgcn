@@ -3,31 +3,17 @@ const EmailService = require("../services/EmailService");
 const Article = require('../models/Article');
 const asyncHandler = require('../middleware/asyncHandler');
 
-// Plateformes réellement consommées par un workflow n8n.
-// X reste écarté par décision assumée (coût de l'API, cf. roadmap) : on
-// l'enfilait quand même, si bien que les entrées s'accumulaient en `queued`
-// sans que rien ne les traite. Le champ reste dans le schéma pour le jour
-// où un workflow X existera.
-const QUEUED_PLATFORMS = ['linkedin'];
+const linkedinPost = require('../services/linkedinPost');
 
-// Helper: mark the LinkedIn + X status for an article and return a diff of
-// what changed. Callers save the article themselves. Deliberately keeps
-// state changes explicit so the controller reads linearly.
-function enqueueSocialPost(article) {
-  const now = new Date();
-  article.socialPosted = article.socialPosted || {};
-  QUEUED_PLATFORMS.forEach((platform) => {
-    const current = article.socialPosted[platform] || {};
-    // Only queue if not already queued/posted — no double-queueing.
-    if (current.status === 'posted') return;
-    article.socialPosted[platform] = {
-      ...(current.toObject?.() || current),
-      status: 'queued',
-      queuedAt: now,
-      error: undefined,
-    };
-  });
-}
+// Publier un article n'enfile plus rien sur LinkedIn — ni ici, ni via le
+// brouillon hebdomadaire. Un post ne part que si quelqu'un a ouvert le
+// composeur du tableau de bord et écrit le texte. C'est la seule barrière
+// qui tienne dans le temps : tant que la publication déclenchait le post,
+// la forme du post était forcément produite par une machine.
+//
+// X n'a jamais eu de workflow n8n (coût de l'API) : les entrées s'y
+// accumulaient en `queued` sans que rien ne les traite. Le champ reste
+// dans le schéma pour le jour où un workflow X existera.
 
 // Approx 200 wpm reading rate. Math.max(1, …) avoids "0 min" for very
 // short articles (a 1-word teaser still shows "1 min").
@@ -140,32 +126,20 @@ exports.publishArticle = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Article not found' });
   }
 
-  const wasPublished = article.published;
   article.published = !article.published;
   article.publishedAt = article.published ? new Date() : null;
 
-  // Enqueue for social posting on FIRST publication only (not republish,
-  // not unpublish). n8n on homeserv01 polls /api/social/pending every ~5 min
-  // and takes over from there.
-  const isFirstPublish = article.published && !wasPublished &&
-    article.socialPosted?.linkedin?.status !== 'posted' &&
-    article.socialPosted?.x?.status !== 'posted';
-
-  let socialResults = null;
-  if (isFirstPublish) {
-    enqueueSocialPost(article);
-    socialResults = { queued: true };
-  }
-
   await article.save();
-  res.json({ success: true, data: article, social: socialResults });
+
+  // `social: null` en permanence — conservé dans la réponse pour ne pas
+  // casser les clients qui lisent ce champ. Publier ne poste plus.
+  res.json({ success: true, data: article, social: null });
 });
 
-// POST /api/articles/:id/social-publish — admin, re-queue for social posting.
-// Used by the admin UI's "Push to LinkedIn" button (also re-triggers failed
-// articles). Flips status back to 'queued' regardless of previous state
-// (except 'posted' — that stays 'posted' unless we explicitly want to re-post,
-// which we don't right now).
+// POST /api/articles/:id/social-publish { text, firstComment }
+// Admin — enfile le post LinkedIn écrit dans le composeur du tableau de bord.
+// C'est le SEUL chemin qui met un article dans la file : sans texte rédigé,
+// rien ne part. Un article déjà posté n'est pas remis en file (doublon).
 exports.triggerSocialPublish = asyncHandler(async (req, res) => {
   const article = await Article.findById(req.params.id);
 
@@ -177,17 +151,50 @@ exports.triggerSocialPublish = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Article must be published first' });
   }
 
-  enqueueSocialPost(article);
+  if (article.socialPosted?.linkedin?.status === 'posted') {
+    return res.status(409).json({
+      success: false,
+      error: 'Article déjà posté sur LinkedIn',
+    });
+  }
+
+  const { text, firstComment } = req.body || {};
+
+  const validation = linkedinPost.validatePostText(text);
+  if (!validation.ok) {
+    return res.status(400).json({ success: false, error: validation.error });
+  }
+
+  const commentValidation = linkedinPost.validateFirstComment(firstComment);
+  if (!commentValidation.ok) {
+    return res.status(400).json({ success: false, error: commentValidation.error });
+  }
+
+  // Commentaire laissé vide → l'URL canonique nue. L'API LinkedIn refuse un
+  // commentaire vide et l'article partirait en `failed`. Une URL nue, c'est
+  // un lien, pas une formule qui se répète de post en post.
+  const comment = typeof firstComment === 'string' && firstComment.trim()
+    ? firstComment.trim()
+    : linkedinPost.articleUrl(article);
+
+  const current = article.socialPosted?.linkedin;
+  article.socialPosted = article.socialPosted || {};
+  article.socialPosted.linkedin = {
+    ...(current?.toObject?.() || current || {}),
+    status: 'queued',
+    queuedAt: new Date(),
+    text: text.trim(),
+    firstComment: comment,
+    error: undefined,
+  };
+
   await article.save();
 
   res.json({
     success: true,
     data: {
       article,
-      queued: {
-        linkedin: article.socialPosted?.linkedin?.status,
-        x: article.socialPosted?.x?.status,
-      },
+      queued: { linkedin: article.socialPosted.linkedin.status },
     },
   });
 });
@@ -221,10 +228,11 @@ exports.hermesDraft = asyncHandler(async (req, res) => {
   req.body.author = admin._id;
   const article = await Article.create(req.body);
 
-  // Auto-publish and queue for LinkedIn + X posting
+  // Auto-publié sur le blog, mais PAS enfilé sur LinkedIn. C'était le seul
+  // chemin où un post partait sans que personne n'ait relu ni l'article ni
+  // le post. Le mail de notification reste le point d'entrée humain.
   article.published = true;
   article.publishedAt = new Date();
-  enqueueSocialPost(article);
   await article.save();
 
   // Fire-and-forget email notification
@@ -235,5 +243,5 @@ exports.hermesDraft = asyncHandler(async (req, res) => {
     console.error('Failed to send draft notification email:', err.message);
   });
 
-  res.status(201).json({ success: true, data: article, social: { queued: true } });
+  res.status(201).json({ success: true, data: article, social: null });
 });

@@ -36,19 +36,27 @@ exports.getPending = asyncHandler(async (req, res) => {
     [statusPath]: 'queued',
   }).sort({ [`socialPosted.${platform}.queuedAt`]: 1 }).limit(50);
 
-  // Build the platform-specific payload. For X we currently don't have a
-  // dedicated builder — n8n will get the same shape but should ignore or
-  // adapt as needed.
-  const data = articles.map((a) => ({
-    articleId: String(a._id),
-    slug: a.slug,
-    title: a.title,
-    tags: a.tags,
-    queuedAt: a.socialPosted?.[platform]?.queuedAt,
-    text: platform === 'linkedin' ? linkedinPost.buildLinkedInPost(a) : null,
-    firstComment: platform === 'linkedin' ? linkedinPost.buildLinkedInFirstComment(a) : null,
-    url: linkedinPost.articleUrl(a),
-  }));
+  // Le texte n'est plus construit ici : il a été écrit à la main dans le
+  // composeur du tableau de bord et stocké sur l'article à l'enfilement.
+  // Le contrat servi à n8n est identique ({ text, firstComment }) — le
+  // workflow homeserv01 n'a pas besoin d'être réimporté.
+  //
+  // Une entrée `queued` sans texte ne peut pas être postée : n8n enverrait
+  // `null` dans le corps du post. Ça n'arrive que pour une entrée enfilée
+  // avant que le texte devienne obligatoire — on la laisse en base et on ne
+  // la sert pas, plutôt que de publier une coquille.
+  const data = articles
+    .filter((a) => a.socialPosted?.[platform]?.text)
+    .map((a) => ({
+      articleId: String(a._id),
+      slug: a.slug,
+      title: a.title,
+      tags: a.tags,
+      queuedAt: a.socialPosted?.[platform]?.queuedAt,
+      text: a.socialPosted[platform].text,
+      firstComment: a.socialPosted[platform].firstComment || null,
+      url: linkedinPost.articleUrl(a),
+    }));
 
   res.json({ success: true, count: data.length, data });
 });

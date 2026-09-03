@@ -50,6 +50,11 @@ const articleSchema = new mongoose.Schema(
         postUrn: String,      // URN LinkedIn du post (renvoyé par leur API)
         commentUrn: String,   // URN du firstComment
         error: String,        // message si status='failed'
+        // Texte du post, écrit à la main dans le tableau de bord. Il n'est
+        // plus dérivé de l'article : c'était la cause de la sérialité des
+        // posts (cf. services/linkedinPost.js). Sans texte, pas d'enfilement.
+        text: String,
+        firstComment: String, // commentaire posté juste après, par n8n
       },
       x: {
         status: {
