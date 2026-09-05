@@ -162,3 +162,37 @@ describe('listerBrouillons face à un jeton refusé', () => {
     });
   });
 });
+
+describe('champ verifie (preuves mécaniques)', () => {
+  const brut = [
+    '---',
+    'title: "Un titre assez long pour le schéma"',
+    'draft: true',
+    'aVerifier:',
+    '  - "2 heures (durée) — contexte"',
+    'verifie:',
+    '  - "14 jours (durée) — vu dans a1b2c3d bot/watchdog.py : « # 14 days »"',
+    '---',
+    'Corps.',
+  ].join('\n');
+
+  it('est lu comme une liste', () => {
+    const { donnees } = lireFrontmatter(brut);
+    expect(donnees.verifie).toEqual(['14 jours (durée) — vu dans a1b2c3d bot/watchdog.py : « # 14 days »']);
+  });
+
+  it('disparaît à la publication, avec aVerifier vidé', () => {
+    const { contenu } = appliquerPublication(brut);
+    const entete = contenu.split('---')[1];
+    expect(entete).toMatch(/draft: false/);
+    expect(entete).toMatch(/aVerifier: \[\]/);
+    expect(entete).not.toMatch(/verifie:/);
+    expect(entete).not.toMatch(/14 days/);
+    expect(contenu.endsWith('Corps.')).toBe(true);
+  });
+
+  it('absent du frontmatter, vaut une liste vide côté API', () => {
+    const { donnees } = lireFrontmatter('---\ntitle: "x"\ndraft: true\n---\ncorps');
+    expect(Array.isArray(donnees.verifie) ? donnees.verifie : []).toEqual([]);
+  });
+});

@@ -193,6 +193,9 @@ async function listerBrouillons() {
         brouillon: donnees.draft === true,
         assisteParIA: donnees.aiAssisted === true,
         aVerifier: Array.isArray(donnees.aVerifier) ? donnees.aVerifier : [],
+        // Preuves mécaniques du pipeline : chiffres retrouvés dans un commit
+        // ou un diff. À lire, pas à cocher.
+        verifie: Array.isArray(donnees.verifie) ? donnees.verifie : [],
         corps,
         motsEnviron: corps.split(/\s+/).filter(Boolean).length,
       };
@@ -260,9 +263,13 @@ function appliquerPublication(brut) {
 
   // Un article publié n'a plus rien à vérifier, ou il n'aurait pas dû l'être.
   // Deux formes possibles : séquence sur plusieurs lignes, ou liste en ligne.
+  // Les preuves (`verifie`) partent avec : elles n'ont de sens que pendant
+  // la relecture.
   nouvelEntete = nouvelEntete
     .replace(/^aVerifier:[ \t]*\n(?:[ \t]+-[ \t].*(?:\n|$))*/m, 'aVerifier: []\n')
     .replace(/^aVerifier:[ \t]*\[[^\]]*\][ \t]*$/m, 'aVerifier: []')
+    .replace(/^verifie:[ \t]*\n(?:[ \t]+-[ \t].*(?:\n|$))*/m, '')
+    .replace(/^verifie:[ \t]*\[[^\]]*\][ \t]*\n?/m, '')
     .replace(/\n+(?=\n?$)/, '\n')
     .replace(/\n$/, '');
 

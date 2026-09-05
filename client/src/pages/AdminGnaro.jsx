@@ -15,6 +15,24 @@ import Markdown from 'react-markdown';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
+// Une ligne de vérification, avec sa source ou sa piste mise en évidence.
+// Le pipeline écrit « … — vu dans a1b2c3d src/x.py : « … » » pour une preuve
+// et « … ⇢ piste : a1b2c3d src/x.py : « … » » pour un rapprochement. On
+// coupe sur ces marqueurs pour que l'œil trouve la source sans lire le reste.
+function Preuve({ ligne }) {
+  const marqueur = ligne.includes(' — vu dans ') ? ' — vu dans ' : ligne.includes(' ⇢ piste : ') ? ' ⇢ piste : ' : null;
+  if (!marqueur) return <>{ligne}</>;
+  const [texte, source] = ligne.split(marqueur);
+  return (
+    <>
+      {texte}
+      <span className="block mt-0.5 font-mono text-[11px] opacity-80">
+        {marqueur.trim()} {source}
+      </span>
+    </>
+  );
+}
+
 export default function AdminGnaro() {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -184,6 +202,25 @@ export default function AdminGnaro() {
                   </p>
                 )}
 
+                {choisi.verifie?.length > 0 && (
+                  <div className="mt-6 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4">
+                    <h2 className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                      Retrouvé dans les commits ({choisi.verifie.length})
+                    </h2>
+                    <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
+                      Ces chiffres figurent tels quels dans un commit ou un diff. La source
+                      est indiquée : vérifiez que l'article l'interprète correctement.
+                    </p>
+                    <ul className="mt-3 space-y-1.5">
+                      {choisi.verifie.map((ligne, i) => (
+                        <li key={i} className="text-xs text-emerald-900 dark:text-emerald-200">
+                          <Preuve ligne={ligne} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {choisi.aVerifier.length > 0 && (
                   <div className="mt-6 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-4">
                     <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
@@ -203,7 +240,7 @@ export default function AdminGnaro() {
                             onChange={(e) => setCoches((c) => ({ ...c, [i]: e.target.checked }))}
                             className="mt-0.5 shrink-0"
                           />
-                          <label htmlFor={`verif-${i}`} className="cursor-pointer">{ligne}</label>
+                          <label htmlFor={`verif-${i}`} className="cursor-pointer"><Preuve ligne={ligne} /></label>
                         </li>
                       ))}
                     </ul>
