@@ -81,8 +81,6 @@ export default function PerformanceWidget() {
   if (error) return <WidgetShell title={t('widgets.performance')}><WidgetError onRetry={fetchData} /></WidgetShell>;
   if (!data) return <WidgetShell title={t('widgets.performance')}><p className="text-sm text-gray-400">No data</p></WidgetShell>;
 
-  const pnlColor = data.totalPnl >= 0 ? 'text-accent' : 'text-red-500';
-
   return (
     <WidgetShell title={t('widgets.performance')}>
       <div className="grid grid-cols-2 gap-3 mb-4">

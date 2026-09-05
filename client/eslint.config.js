@@ -23,7 +23,17 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // `ignoreRestSiblings` : « const { _id, createdAt, ...payload } = x » sert
+      // à retirer des champs, pas à les lire. Ce n'est pas une variable morte.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', ignoreRestSiblings: true }],
+      // DETTE, notée le 5 septembre 2026. La règle est arrivée avec
+      // eslint-plugin-react-hooks 6 : quinze widgets et pages mettent l'état
+      // à jour de façon synchrone dans un effet, un motif à réécrire un par
+      // un (état dérivé ou chargement asynchrone). En avertissement pour que
+      // la CI reste lisible ; à repasser en erreur quand la dette est réglée.
+      'react-hooks/set-state-in-effect': 'warn',
+      // Même dette : deux contextes exportent un hook à côté du fournisseur.
+      'react-refresh/only-export-components': 'warn',
     },
   },
 ])

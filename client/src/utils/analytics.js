@@ -22,7 +22,10 @@ export function setAdminBrowser(on) {
   try {
     if (on) localStorage.setItem(ADMIN_FLAG_KEY, '1');
     else localStorage.removeItem(ADMIN_FLAG_KEY);
-  } catch {}
+  } catch {
+    // Stockage local indisponible (navigation privée, quota) : on n'a rien à
+    // faire de plus, le drapeau est un simple confort.
+  }
 }
 
 function shouldTrack() {

@@ -82,7 +82,10 @@ export default function Dashboard() {
     try {
       await api.patch('/dashboard/widgets', { widgets: newConfig });
       setWidgets(newConfig);
-    } catch {}
+    } catch {
+      // Sauvegarde échouée : la disposition affichée reste l'ancienne et le
+      // panneau se ferme quand même. Pas de message à l'utilisateur ici.
+    }
     setShowConfig(false);
   };
 
