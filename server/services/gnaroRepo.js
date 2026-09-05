@@ -20,8 +20,11 @@ const DOSSIER = 'src/content/blog';
 function config() {
   const token = process.env.GNARO_GITHUB_TOKEN;
   if (!token) {
-    const e = new Error('GNARO_GITHUB_TOKEN absent : accès au dépôt gnaro impossible.');
+    const e = new Error(
+      'Jeton GitHub absent sur le serveur (GNARO_GITHUB_TOKEN) : accès au dépôt gnaro impossible.'
+    );
     e.statusCode = 503;
+    e.expose = true;
     throw e;
   }
   return {
@@ -29,6 +32,24 @@ function config() {
     repo: process.env.GNARO_REPO || 'Gnaro-Shaft/gnaro',
     branche: process.env.GNARO_BRANCH || 'main',
   };
+}
+
+/**
+ * Message destiné à l'utilisateur du tableau de bord pour les refus de
+ * GitHub qui ont une cause connue et une action claire. Le jeton est un PAT
+ * à portée fine avec date d'expiration : le jour où il expire, l'API répond
+ * 401 et, sans ceci, l'interface n'affichait que « Server Error » (vécu le
+ * 5 septembre 2026). `null` pour tout autre statut : le message brut reste
+ * réservé aux journaux.
+ */
+function messageGitHub(statut) {
+  if (statut === 401) {
+    return 'GitHub refuse le jeton du serveur (expiré ou révoqué). À renouveler : nouveau jeton à portée fine sur le dépôt gnaro, puis `fly secrets set GNARO_GITHUB_TOKEN=…`.';
+  }
+  if (statut === 403) {
+    return 'GitHub refuse l’accès au dépôt gnaro : le jeton n’a pas le droit « contents », ou la limite d’appels est atteinte. Vérifier ses permissions.';
+  }
+  return null;
 }
 
 async function appel(chemin, options = {}) {
@@ -47,13 +68,17 @@ async function appel(chemin, options = {}) {
 
   if (!reponse.ok) {
     const corps = await reponse.text().catch(() => '');
+    const explicite = messageGitHub(reponse.status);
     const e = new Error(
-      `GitHub a répondu ${reponse.status} sur ${chemin}. ${corps.slice(0, 200)}`
+      explicite || `GitHub a répondu ${reponse.status} sur ${chemin}. ${corps.slice(0, 200)}`
     );
     // 404 et 409 remontent tels quels : « fichier introuvable » et « le
     // fichier a changé depuis la lecture » sont des situations normales que
     // l'interface doit savoir distinguer d'une panne.
     e.statusCode = [404, 409, 422].includes(reponse.status) ? reponse.status : 502;
+    // Un message rédigé pour l'utilisateur peut traverser le masque de
+    // production ; le message brut de GitHub, non.
+    e.expose = Boolean(explicite);
     throw e;
   }
 
@@ -302,4 +327,5 @@ module.exports = {
   // exportés pour les tests
   lireFrontmatter,
   appliquerPublication,
+  messageGitHub,
 };

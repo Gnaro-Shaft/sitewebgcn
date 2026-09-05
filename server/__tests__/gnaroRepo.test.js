@@ -4,9 +4,10 @@
 // Une expression régulière trop gourmande y corromprait un article publié,
 // et l'erreur ne se verrait qu'en ligne. D'où ces cas limites.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
-const { lireFrontmatter, appliquerPublication } = require('../services/gnaroRepo');
+const repo = require('../services/gnaroRepo');
+const { lireFrontmatter, appliquerPublication } = repo;
 
 const brouillon = [
   '---',
@@ -112,5 +113,52 @@ describe('appliquerPublication', () => {
     } catch (e) {
       expect(e.statusCode).toBe(422);
     }
+  });
+});
+
+describe('messageGitHub', () => {
+  const { messageGitHub } = repo;
+
+  it('explique un 401 et dit quoi faire', () => {
+    const m = messageGitHub(401);
+    expect(m).toMatch(/expiré ou révoqué/);
+    expect(m).toMatch(/GNARO_GITHUB_TOKEN/);
+  });
+
+  it('explique un 403', () => {
+    expect(messageGitHub(403)).toMatch(/contents|limite/);
+  });
+
+  it('ne rédige rien pour les autres statuts', () => {
+    expect(messageGitHub(500)).toBeNull();
+    expect(messageGitHub(404)).toBeNull();
+  });
+});
+
+describe('listerBrouillons face à un jeton refusé', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.GNARO_GITHUB_TOKEN;
+  });
+
+  it('remonte un 502 avec un message exposable quand GitHub répond 401', async () => {
+    process.env.GNARO_GITHUB_TOKEN = 'faux';
+    vi.stubGlobal('fetch', async () => ({
+      ok: false,
+      status: 401,
+      text: async () => '{"message":"Bad credentials"}',
+    }));
+    await expect(repo.listerBrouillons()).rejects.toMatchObject({
+      statusCode: 502,
+      expose: true,
+      message: expect.stringMatching(/expiré ou révoqué/),
+    });
+  });
+
+  it('signale un jeton absent avec un 503 exposable', async () => {
+    await expect(repo.listerBrouillons()).rejects.toMatchObject({
+      statusCode: 503,
+      expose: true,
+    });
   });
 });
