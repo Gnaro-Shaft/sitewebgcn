@@ -1,193 +1,6 @@
 {
-  "nav": {
-    "home": "Accueil",
-    "projects": "Projets",
-    "blog": "Blog",
-    "stack": "Stack",
-    "about": "À propos",
-    "skills": "Compétences",
-    "contact": "Contact",
-    "dashboard": "Dashboard"
-  },
-  "stack": {
-    "title": "Architecture & Stack",
-    "tagline": "Comment ce site est construit, pourquoi ces choix techniques, et ce que j'ai appris en chemin.",
-    "diagramTitle": "Vue d'ensemble",
-    "diagramHint": "Survole les blocs pour voir le détail de chaque composant.",
-    "layersTitle": "Les 4 couches",
-    "decisionsTitle": "Décisions techniques",
-    "decisionsSubtitle": "Pour chaque choix d'architecture, le contexte, le raisonnement et les compromis assumés.",
-    "lessonsTitle": "Ce que j'ai appris",
-    "stats": {
-      "linesOfCode": "Lignes de code",
-      "npmDeps": "Dépendances npm",
-      "endpoints": "Endpoints REST",
-      "widgets": "Widgets dashboard",
-      "buildTime": "Construit en",
-      "deploy": "Deploy auto"
-    },
-    "layers": {
-      "frontend": {
-        "title": "Frontend — SPA React",
-        "desc": "Application React 19 + Vite, animations, mode sombre/clair, scroll snap full-screen sur la home, internationalisation FR/EN, SEO avec Open Graph dynamique."
-      },
-      "backend": {
-        "title": "Backend — API REST MVC",
-        "desc": "Node 20 + Express 5 en architecture MVC. Authentification JWT, rate limiting, validation d'entrée, CORS strict, asyncHandler partout, Helmet + CSP."
-      },
-      "external": {
-        "title": "Services externes",
-        "desc": "Anthropic Claude pour générer les articles. GitHub API pour la heatmap et les skills dynamiques. Hyperliquid pour les positions de trading live. Make.com pour publier sur LinkedIn."
-      },
-      "infra": {
-        "title": "Infrastructure & Deploy",
-        "desc": "Hébergé sur Fly.io en région Paris. Docker multi-stage, utilisateur non-root. MongoDB Atlas (2 clusters). CI/CD GitHub Actions auto-deploy à chaque push sur main."
-      }
-    },
-    "diagram": {
-      "visitor": "Visiteur",
-      "visitorTip": "Un recruteur, un client, ou toi-même qui débarque sur gcn-data.fr.",
-      "flyTip": "Un seul container Docker sur Fly.io qui sert le frontend buildé ET le backend Express. Multi-stage build : 1 image, 2 rôles.",
-      "frontendTip": "React 19 + Vite + Tailwind v4. SPA avec routing client, i18n FR/EN, SEO dynamique via react-helmet-async.",
-      "backendTip": "Express 5 en MVC. JWT auth, rate limiting (10 logins/15min), validation, CORS restrictif, Helmet + CSP, graceful shutdown SIGTERM.",
-      "mongoTip": "2 clusters Atlas : principal (users, articles, projets, page views, AI usage) + bot (trades, signaux, OHLC du bot Hyperliquid V8).",
-      "claudeTip": "Claude Sonnet 4.5 via SDK officiel. Budget guard hard limit (4.17$/mois, 50$/an). Génération d'articles à partir du contexte projets + activité GitHub.",
-      "githubTip": "GitHub API pour : heatmap de contributions, skills dynamiques (langages + dépendances), import semi-auto des projets dans la DB.",
-      "hyperTip": "Hyperliquid DEX API pour récupérer les positions ouvertes et le PnL en temps réel sur le widget Trades du dashboard.",
-      "makeTip": "Webhook générique → Make.com → LinkedIn. Choisi pour éviter l'API LinkedIn directe (review obligatoire de plusieurs semaines). Migration n8n self-hosted prévue plus tard.",
-      "linkedinTip": "Plus d'auto-publish : publier un article ne poste rien. Le texte du post est écrit à la main dans le tableau de bord, puis mis en file. n8n l'envoie tel quel.",
-      "hoverHint": "↑ Survole les blocs pour voir le détail de chaque composant"
-    },
-    "decisions": {
-      "reasoning": "Pourquoi ce choix",
-      "tradeoffLabel": "Compromis assumé",
-      "mongo": {
-        "title": "MongoDB plutôt que PostgreSQL",
-        "choice": "MongoDB Atlas",
-        "reasoning": "Schémas flexibles : les highlights des projets sont des arrays de strings, les articles ont du markdown libre, l'AIUsage tracke un format évolutif. Pas de migrations SQL à chaque ajout de champ.\n\nLe trafic d'un portfolio personnel ne justifie pas la rigueur d'une base relationnelle.",
-        "tradeoff": "Pas de jointures vraies — j'utilise du dénormalization (ex: articles.author est juste un ObjectId, je peuple à la demande). Acceptable à mon échelle."
-      },
-      "flyio": {
-        "title": "Fly.io plutôt que Vercel ou Render",
-        "choice": "Fly.io en région Paris",
-        "reasoning": "Une seule unité de déploiement (frontend + backend dans un même container) au lieu de splitter front sur Vercel et API sur Render. Configuration via fly.toml versionnée.\n\nLatence basse pour les visiteurs européens (région cdg). Auto-stop pour économiser les ressources quand le site est inactif.",
-        "tradeoff": "Cold start de 2-5s après inactivité. Acceptable pour un portfolio (un recruteur attendra). Si traffic croît, je passerai à min_machines_running=1."
-      },
-      "webhook": {
-        "title": "Make.com plutôt que l'API LinkedIn directe",
-        "choice": "Webhook → Make.com → LinkedIn",
-        "reasoning": "L'API LinkedIn officielle exige une app review (2-8 semaines, souvent refusée pour les portfolios perso) et ne supporte plus le posting depuis un profil personnel sans Page Company.\n\nMake.com gère l'OAuth LinkedIn de son côté. Setup en 5 minutes, gratuit jusqu'à 1000 ops/mois.",
-        "tradeoff": "Dépendance à un service tiers. Mitigé par un payload générique : migrer vers n8n self-hosted = juste changer une env var, zéro refactor."
-      },
-      "analytics": {
-        "title": "Analytics maison plutôt que Plausible/Umami",
-        "choice": "Build it yourself dans le dashboard",
-        "reasoning": "Cohérent avec la philosophie « tout dans mon cockpit ». Aucune dépendance externe, gratuit à vie, et c'est un exercice formateur pour comprendre vraiment comment fonctionne du tracking de production.\n\nLes métriques utiles pour un portfolio (vues, pays, sources, articles top) sont les plus simples à implémenter — ~90% de la valeur d'un outil pro pour 4-6h de code.",
-        "tradeoff": "Pas de heatmap clic, pas de session replay, pas d'A/B testing. Pas pertinent pour un portfolio. Si besoin un jour : ajouter Microsoft Clarity en 1 ligne."
-      },
-      "webhookGeneric": {
-        "title": "Webhook générique vs SDK LinkedIn",
-        "choice": "Format payload neutre, agnostique",
-        "reasoning": "Le service SocialPublisher envoie un JSON `{ platform, text, article: {...} }` à un webhook. Aucun couplage avec Make, X, ou LinkedIn dans le code.\n\nDemain quand j'aurai mon serveur, je migre vers n8n self-hosted en changeant juste l'env var LINKEDIN_WEBHOOK_URL.",
-        "tradeoff": "Plus de logique dans Make.com (formattage final pour chaque plateforme) que dans le code. Acceptable car Make est versionnable."
-      },
-      "snapscroll": {
-        "title": "Scroll snap full-screen sur la home",
-        "choice": "1 section = 1 écran, scroll qui accroche",
-        "reasoning": "Différencie immédiatement le site d'un portfolio classique. Force à concevoir chaque section comme une unité visuelle complète.\n\nIdentité Matrix + glow accent = un visiteur sait en 2 secondes que c'est un dev qui aime ce qu'il fait.",
-        "tradeoff": "Moins de contenu visible d'un coup vs un long scroll classique. Mitigé en limitant la home aux essentiels (Hero, About, Skills, 6 projets, Contact) et en mettant le détail sur les pages /projects et /blog."
-      }
-    },
-    "lessons": {
-      "label": "Leçon",
-      "1": "Le code n'est que 30% du job. Chaque feature m'a confronté à un problème qui n'apparaît que sur un site en production : DNS, CORS sous proxy, anti-spam LinkedIn, cache Google, dotenv qui se fait override par une autre app... C'est ça qui m'a fait progresser le plus vite.",
-      "2": "Le pattern « degradation gracieuse » sauve la vie. Les services externes (Anthropic, GitHub, Make.com) peuvent tomber. Chaque appel a un fallback, chaque webhook un graceful skip si non configuré. Le site reste fonctionnel même quand l'écosystème vacille.",
-      "3": "Construire son propre tracking est sous-estimé. J'ai tout dans mon dashboard : analytics, budget IA, GitHub stats, trading live, articles. Un seul cockpit, pas 5 onglets ouverts. Cette unification est ce qui rend le projet vivant à mes yeux.",
-      "4": "Ce qui n'est pas mesuré n'existe pas. Avant les analytics, je ne savais pas si quelqu'un visitait mon site. Avant le budget guard sur l'IA, je ne savais pas combien de tokens je consommais. La donnée transforme l'intuition en décision."
-    },
-    "footer": {
-      "builtWith": "Site construit avec attention. Code source ouvert."
-    },
-    "lighthouse": {
-      "title": "Scores Lighthouse",
-      "hint": "Mesures fraîches depuis l'API PageSpeed Insights de Google. Mises à jour automatique chaque semaine. Pas de capture d'écran maquillée — clique sur le lien sous les badges pour vérifier en live.",
-      "mobile": "Mobile",
-      "desktop": "Desktop",
-      "performance": "Performance",
-      "accessibility": "Accessibilité",
-      "bestPractices": "Best Practices",
-      "seo": "SEO",
-      "measuredAt": "Mesuré le",
-      "verifyOnGoogle": "Vérifier sur Google PageSpeed",
-      "notYetAvailable": "Première mesure en cours — repasse dans quelques minutes."
-    }
-  },
-  "hero": {
-    "title": "Genaro-Cedric",
-    "subtitle": "Ingénieur IA & Développeur",
-    "description": "Je construis des systèmes d'IA de qualité production : RAG évalué à 90 % de précision, assistant multi-agents, et bot de trading avec ML déployé 24/7.",
-    "downloadCv": "Télécharger CV",
-    "contactMe": "Me contacter"
-  },
-  "about": {
-    "title": "À propos",
-    "paragraph1_start": "Je conçois des systèmes d'IA appliqués — et je m'appuie sur ",
-    "paragraph1_highlight": "7 ans à résoudre des problèmes techniques complexes",
-    "paragraph1_end": " en production.",
-    "paragraph2": "Après plus de 7 ans en support IT (N1/N2) auprès de grands comptes comme TF1 et Bouygues, j'ai développé un réflexe clé en ingénierie IA : décortiquer un système, remonter un flux jusqu'à sa cause racine, et ne rien lâcher avant que ça marche.",
-    "paragraph3_start": "Aujourd'hui je construis des projets ",
-    "paragraph3_highlight": "Data & IA, avec un focus finance et crypto",
-    "paragraph3_end": " : Mnemo (RAG self-hosted, 90 % Hit@1), Jarvis Local (assistant IA multi-agents) et un bot de trading Hyperliquid avec filtre ML en production.",
-    "paragraph4": "Objectif : rejoindre une équipe Data / AI Engineering où mon sens du debug et de l'amélioration continue fait la différence.",
-    "timeline": {
-      "support": "Support IT",
-      "supportPeriod": "7+ ans",
-      "bootcamp": "Bootcamp",
-      "bootcampPeriod": "Web & Mobile",
-      "ai": "Data / IA",
-      "aiPeriod": "En cours"
-    },
-    "githubActivity": "Activité GitHub"
-  },
-  "skills": {
-    "title": "Compétences",
-    "groups": {
-      "frontend": "Frontend & Mobile",
-      "ai": "IA & Python",
-      "backend": "Backend & Outils"
-    }
-  },
   "projects": {
-    "title": "Projets",
-    "viewAll": "Voir tout",
-    "all": "Tous",
-    "noProjects": "Aucun projet pour le moment.",
-    "code": "Code",
-    "live": "Démo",
     "featured": "Projet signature"
-  },
-  "contact": {
-    "title": "Contact",
-    "name": "Nom",
-    "email": "Email",
-    "subject": "Sujet (optionnel)",
-    "message": "Votre message",
-    "send": "Envoyer",
-    "sending": "Envoi en cours...",
-    "success": "Message envoyé avec succès !",
-    "error": "Échec de l'envoi. Veuillez réessayer."
-  },
-  "blog": {
-    "title": "Blog",
-    "intro": "Je note ici mes apprentissages sur l'IA appliquée, le RAG, l'automatisation et la donnée. Articles techniques sans bullshit — ce qui a marché, ce qui m'a pris la tête, et pourquoi.",
-    "featured": "À la une",
-    "read": "Lire l'article",
-    "readingTime_one": "{{count}} min de lecture",
-    "readingTime_other": "{{count}} min de lecture",
-    "backToBlog": "Retour au blog",
-    "notFound": "Article introuvable",
-    "loading": "Chargement...",
-    "noArticles": "Aucun article pour le moment."
   },
   "login": {
     "title": "Dashboard",
@@ -210,22 +23,11 @@
   },
   "widgets": {
     "crypto": "Crypto Live",
-    "github": "Stats GitHub",
-    "blog": "Stats Blog",
     "trades": "Trades",
     "performance": "Performance Algo",
     "signals": "Signaux",
-    "analytics": "Analytics",
     "botStatus": "Statut Bot",
     "decisions": "Journal des décisions",
-    "views7d": "Vues 7j",
-    "uniqueVisitors": "Visiteurs uniques",
-    "mobile": "Mobile",
-    "dailyTrend": "Tendance quotidienne",
-    "topPages": "Pages les plus vues",
-    "topReferrers": "Sources de trafic",
-    "noData": "Aucune donnée pour le moment",
-    "viewDetails": "Voir les détails",
     "openPositions": "Positions ouvertes",
     "noOpenPositions": "Aucune position ouverte",
     "recentTrades": "Trades récents",
@@ -239,35 +41,12 @@
     "totalTrades": "Total trades",
     "topLanguages": "Langages principaux",
     "recentActivity": "Activité récente",
-    "publicRepos": "repos publics",
-    "recentArticles": "Articles récents",
-    "published": "publié(s)",
-    "drafts": "brouillon(s)",
-    "totalViews": "vues totales",
     "lastSignals": "Derniers signaux",
     "signalDistribution": "Distribution",
     "noSignals": "Aucun signal",
     "change24h": "Variation 24h",
     "autoRefresh": "actualisation auto 60s",
-    "chart7d": "Graphique 7 jours",
-    "blogAi": "Blog AI",
-    "monthBudget": "Ce mois",
-    "yearBudget": "Cette année",
-    "generationsThisMonth": "générations ce mois",
-    "remainingMonth": "restant ce mois",
-    "generateArticle": "Générer un article",
-    "drafts": "Brouillons",
-    "customTopic": "Sujet personnalisé",
-    "topicPlaceholder": "Ex: Comment j'ai deploye mon bot sur Fly.io",
-    "generate": "Générer",
-    "or": "OU",
-    "aiSuggestions": "Suggestions IA (basees sur tes projets)",
-    "suggest": "Suggérer",
-    "clickSuggest": "Clique sur \"Suggérer\" pour voir des idées d'articles basees sur ton activité",
-    "generating": "Génération en cours... (~15-20 secondes)",
-    "loading": "Chargement...",
-    "articleGenerated": "Article généré et sauvegardé en brouillon",
-    "reviewDraft": "Réviser et publier"
+    "chart7d": "Graphique 7 jours"
   },
   "botStatus": {
     "live": "En ligne",
@@ -299,33 +78,6 @@
     "score": "Score",
     "status": "Statut",
     "motif": "Motif"
-  },
-  "analytics": {
-    "title": "Analytics",
-    "exportCsv": "Export CSV",
-    "exportAggregated": "Export agrégé",
-    "exportAggregatedHint": "Top pages, sources, pays — résumé",
-    "exportDetailed": "Export détaillé",
-    "exportDetailedHint": "Une ligne par jour ou par heure",
-    "loadError": "Erreur de chargement des données",
-    "pages": "Pages",
-    "devices": "Appareils",
-    "countries": "Pays",
-    "topArticles": "Top articles",
-    "slug": "Slug",
-    "views": "Vues",
-    "unique": "Uniques",
-    "totalViews": "Vues totales",
-    "hourlyTrend": "Tendance horaire",
-    "startDate": "Date de début",
-    "endDate": "Date de fin",
-    "apply": "Appliquer",
-    "pickDates": "Choisis une plage de dates puis clique sur Appliquer",
-    "excludeMe": "Exclure ce navigateur",
-    "excluded": "Navigateur exclu",
-    "excludeHint": "Ne pas tracker mes propres visites depuis ce navigateur",
-    "noReferrers": "Aucune source externe encore",
-    "noCountries": "Pas encore de données pays"
   },
   "admin": {
     "upload": {
@@ -365,41 +117,13 @@
     "deleteConfirm": "Supprimer definitivement ce projet ?"
   },
   "drafts": {
-    "title": "Gestion des articles",
-    "drafts": "Brouillons",
-    "published": "Publiés",
-    "noDrafts": "Aucun brouillon",
-    "noPublished": "Aucun article publié",
-    "selectToPreview": "Selectionne un article pour le visualiser",
-    "draft": "Brouillon",
-    "live": "En ligne",
     "edit": "Éditer",
     "editing": "Mode édition",
-    "publish": "Publier",
-    "unpublish": "Dépublier",
-    "delete": "Supprimer",
-    "deleteConfirm": "Supprimer definitivement cet article ?",
-    "linkedin": {
-      "compose": "Écrire le post",
-      "composeHint": "Rédiger le post LinkedIn et l'envoyer dans la file",
-      "title": "Post LinkedIn",
-      "textLabel": "Texte du post",
-      "textPlaceholder": "Une idée, la tienne. Pas le résumé de l'article.",
-      "tooShort": "Encore un peu court — minimum {{min}} caractères.",
-      "tooLong": "Trop long — maximum {{max}} caractères.",
-      "commentLabel": "Premier commentaire (optionnel)",
-      "commentPlaceholder": "Laisser vide pour le lien seul",
-      "commentHelp": "Vide = l'URL de l'article, sans formule d'accompagnement.",
-      "send": "Mettre en file",
-      "queued": "Post mis en file. n8n l'enverra sous 5 minutes."
-    }
+    "delete": "Supprimer"
   },
   "notFound": {
     "title": "Page introuvable",
-    "goHome": "Retour à l'accueil"
-  },
-  "footer": {
-    "rights": "Tous droits réservés."
+    "goHome": "Retour au tableau de bord"
   },
   "common": {
     "loading": "Chargement...",

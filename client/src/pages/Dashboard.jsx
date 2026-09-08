@@ -3,27 +3,23 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
-import BlogStatsWidget from '../components/widgets/BlogStatsWidget';
 import GitHubStatsWidget from '../components/widgets/GitHubStatsWidget';
 import CryptoWidget from '../components/widgets/BitcoinWidget';
 import TradesWidget from '../components/widgets/TradesWidget';
 import PerformanceWidget from '../components/widgets/PerformanceWidget';
 import SignalsWidget from '../components/widgets/SignalsWidget';
-import BlogAIWidget from '../components/widgets/BlogAIWidget';
-import AnalyticsWidget from '../components/widgets/AnalyticsWidget';
 import BotStatusWidget from '../components/widgets/BotStatusWidget';
 import DecisionLogWidget from '../components/widgets/DecisionLogWidget';
 import GnaroDraftsWidget from '../components/widgets/GnaroDraftsWidget';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
+import ThemeToggle from '../components/ui/ThemeToggle';
+import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 
 const DEFAULT_WIDGETS = [
   { id: 'botStatus', label: 'Bot Status', enabled: true },
   { id: 'crypto', label: 'Crypto Live', enabled: true },
   { id: 'github', label: 'GitHub Stats', enabled: true },
-  { id: 'blog', label: 'Blog Stats', enabled: true },
-  { id: 'analytics', label: 'Analytics', enabled: true },
-  { id: 'blogAi', label: 'Blog AI', enabled: true },
   { id: 'trades', label: 'Trades', enabled: true },
   { id: 'performance', label: 'Algo Performance', enabled: true },
   { id: 'signals', label: 'Signals', enabled: true },
@@ -35,9 +31,6 @@ const WIDGET_COMPONENTS = {
   botStatus: BotStatusWidget,
   crypto: CryptoWidget,
   github: GitHubStatsWidget,
-  blog: BlogStatsWidget,
-  analytics: AnalyticsWidget,
-  blogAi: BlogAIWidget,
   trades: TradesWidget,
   performance: PerformanceWidget,
   signals: SignalsWidget,
@@ -59,9 +52,13 @@ export default function Dashboard() {
         const saved = res.data.data;
         if (!Array.isArray(saved) || saved.length === 0) return;
 
-        // Auto-add any widget defined in code but missing from user's saved config
-        const savedIds = new Set(saved.map((w) => w.id));
-        const merged = [...saved];
+        // La configuration sauvegardée peut nommer des widgets qui n'existent
+        // plus (Blog Stats, Blog AI, Analytics, retirés avec le site public
+        // en septembre 2026) : on les écarte, et on ajoute ceux définis dans
+        // le code mais absents de la sauvegarde.
+        const connus = saved.filter((w) => WIDGET_COMPONENTS[w.id]);
+        const savedIds = new Set(connus.map((w) => w.id));
+        const merged = [...connus];
         for (const def of DEFAULT_WIDGETS) {
           if (!savedIds.has(def.id)) {
             merged.push(def);
@@ -70,8 +67,8 @@ export default function Dashboard() {
 
         setWidgets(merged);
 
-        // Persist the merge so it's saved for next time
-        if (merged.length !== saved.length) {
+        // On persiste si la fusion a changé quelque chose.
+        if (merged.length !== saved.length || connus.length !== saved.length) {
           api.patch('/dashboard/widgets', { widgets: merged }).catch(() => {});
         }
       })
@@ -90,7 +87,7 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
-    navigate('/');
+    navigate('/login');
     setTimeout(() => logout(), 10);
   };
 
@@ -102,7 +99,7 @@ export default function Dashboard() {
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-dark-bg2/80 backdrop-blur-md border-b border-gray-200 dark:border-dark-border">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/" className="text-xl font-bold tracking-tight text-gray-900 dark:text-dark-text">
+            <a href="/dashboard" className="text-xl font-bold tracking-tight text-gray-900 dark:text-dark-text">
               G<span className="text-accent">.</span>
             </a>
             <span className="text-sm text-gray-400 dark:text-dark-muted">/</span>
@@ -111,6 +108,8 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-4">
             <SessionTimer />
+            <ThemeToggle />
+            <LanguageSwitcher />
             <a
               href="/admin/projects"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
@@ -122,16 +121,6 @@ export default function Dashboard() {
               Projects
             </a>
             <a
-              href="/admin/analytics"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
-              title="Analytics"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Analytics
-            </a>
-            <a
               href="/admin/tiktok"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
               title="TikTok Studio"
@@ -140,16 +129,6 @@ export default function Dashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 4v8.5a3.5 3.5 0 11-3.5-3.5h.5m3-5a4 4 0 004 4" />
               </svg>
               TikTok
-            </a>
-            <a
-              href="/admin/drafts"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
-              title="Admin drafts"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Articles
             </a>
             <button
               onClick={() => setShowConfig(true)}

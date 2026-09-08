@@ -1,117 +1,51 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router';
-import { HelmetProvider } from 'react-helmet-async';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteLoading from './components/RouteLoading';
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Home from './pages/Home';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
-import { usePageTracking } from './utils/analytics';
 
-const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
-const BlogPage = lazy(() => import('./pages/BlogPage'));
-const ArticlePage = lazy(() => import('./pages/ArticlePage'));
+// Depuis septembre 2026, gcn-data.fr n'a plus de partie publique : le site
+// vitrine est gnaro.fr. Il ne reste que le tableau de bord et ses pages
+// d'administration, toutes derrière le login.
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const AdminDrafts = lazy(() => import('./pages/AdminDrafts'));
 const AdminGnaro = lazy(() => import('./pages/AdminGnaro'));
 const AdminProjects = lazy(() => import('./pages/AdminProjects'));
-const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
 const TikTokStudio = lazy(() => import('./pages/TikTokStudio'));
-const StackPage = lazy(() => import('./pages/StackPage'));
 
-function AnalyticsTracker() {
-  usePageTracking();
-  return null;
-}
-
-function PublicLayout({ children }) {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 max-w-6xl mx-auto px-4 w-full pt-16">
-        {children}
-      </main>
-      <Footer />
-    </div>
-  );
+function protege(page) {
+  return <ProtectedRoute>{page}</ProtectedRoute>;
 }
 
 export default function App() {
   return (
     <ErrorBoundary>
-    <HelmetProvider>
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <AnalyticsTracker />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
-              {/* Home — full-screen snap layout, no wrapper */}
-              <Route path="/" element={<><Navbar /><Home /></>} />
-
-              {/* Login — standalone layout */}
+              {/* La racine mène au tableau de bord ; non connecté, on tombe
+                  sur le login via ProtectedRoute. */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
-
-              {/* Dashboard — protected, own layout */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-
-              {/* Admin drafts review */}
-              <Route path="/admin/drafts" element={
-                <ProtectedRoute>
-                  <AdminDrafts />
-                </ProtectedRoute>
-              } />
+              <Route path="/dashboard" element={protege(<Dashboard />)} />
 
               {/* Brouillons du site gnaro.fr — stockés dans son dépôt Git,
                   pas en base : voir server/services/gnaroRepo.js */}
-              <Route path="/admin/gnaro" element={
-                <ProtectedRoute>
-                  <AdminGnaro />
-                </ProtectedRoute>
-              } />
+              <Route path="/admin/gnaro" element={protege(<AdminGnaro />)} />
+              <Route path="/admin/projects" element={protege(<AdminProjects />)} />
+              <Route path="/admin/tiktok" element={protege(<TikTokStudio />)} />
 
-              {/* Admin projects management */}
-              <Route path="/admin/projects" element={
-                <ProtectedRoute>
-                  <AdminProjects />
-                </ProtectedRoute>
-              } />
-
-              {/* Admin analytics */}
-              <Route path="/admin/analytics" element={
-                <ProtectedRoute>
-                  <AdminAnalytics />
-                </ProtectedRoute>
-              } />
-
-              {/* Admin TikTok Studio */}
-              <Route path="/admin/tiktok" element={
-                <ProtectedRoute>
-                  <TikTokStudio />
-                </ProtectedRoute>
-              } />
-
-              {/* Public pages with shared layout */}
-              <Route path="/projects" element={<PublicLayout><ProjectsPage /></PublicLayout>} />
-              <Route path="/stack" element={<PublicLayout><StackPage /></PublicLayout>} />
-              <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
-              <Route path="/blog/:slug" element={<PublicLayout><ArticlePage /></PublicLayout>} />
-              <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
-    </HelmetProvider>
     </ErrorBoundary>
   );
 }

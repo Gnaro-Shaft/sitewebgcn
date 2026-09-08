@@ -124,7 +124,7 @@ export default function AdminGnaro() {
             <span className="text-sm font-medium text-gray-900 dark:text-dark-text">gnaro.fr</span>
           </div>
           <button
-            onClick={() => { navigate('/'); setTimeout(() => logout(), 10); }}
+            onClick={() => { navigate('/login'); setTimeout(() => logout(), 10); }}
             className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-dark-muted hover:text-red-500 transition-colors"
           >
             Déconnexion

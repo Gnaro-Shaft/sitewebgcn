@@ -93,7 +93,7 @@ export default function AdminProjects() {
               {t('adminProjects.importGithub')}
             </button>
             <button
-              onClick={() => { navigate('/'); setTimeout(() => logout(), 10); }}
+              onClick={() => { navigate('/login'); setTimeout(() => logout(), 10); }}
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-dark-muted hover:text-red-500 transition-colors"
             >
               {t('dashboard.logout')}
