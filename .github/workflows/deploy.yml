@@ -1,18 +1,77 @@
-name: Deploy to Fly.io
+# Déploiement automatique du tableau de bord gcn-data.fr.
+#
+# CONÇU POUR SURVIVRE À UN CHANGEMENT D'HÉBERGEUR : rien ici ne connaît le
+# serveur, tout ce qui lui est spécifique vit dans deploy/deploy.sh. Jusqu'en
+# septembre 2026 ce fichier lançait flyctl ; le passage au VPS OVH n'a changé
+# que le nom de ses secrets.
+#
+# Secrets attendus (Settings → Secrets and variables → Actions), affichés par
+# deploy/serveur/preparer.sh :
+#   DEPLOY_HOST, DEPLOY_USER (gcn), DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS
+
+name: Déploiement
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'homeserv01/**'
+      # La configuration du serveur s'installe à la main (preparer.sh).
+      - 'deploy/serveur/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploiement-production
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build & Deploy
+  verifier:
+    name: Vérifier
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: cd client && npm ci
+      # Barrière : les tests unitaires et le build du client doivent passer
+      # AVANT d'envoyer quoi que ce soit. Les tests d'intégration tournent
+      # dans ci.yml, avec MongoDB.
+      - run: npm run test
+      - run: cd client && npm run build
+      # Le client construit est transmis tel quel au job suivant : ce qui est
+      # déployé est exactement ce qui a été vérifié.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+          retention-days: 1
+          if-no-files-found: error
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - run: flyctl deploy --remote-only -a gcn-backend-api
+  deployer:
+    name: Déployer
+    needs: verifier
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # INTERRUPTEUR — éteint tant que la variable de dépôt DEPLOY_ENABLED ne
+    # vaut pas 'true'. Le job est alors SAUTÉ, pas en échec. À allumer une
+    # fois le DNS basculé :  gh variable set DEPLOY_ENABLED --body true
+    if: vars.DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+      - name: Déploiement
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: ./deploy/deploy.sh

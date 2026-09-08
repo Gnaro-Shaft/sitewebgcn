@@ -1,0 +1,38 @@
+# Service systemd du tableau de bord gcn-data.fr.
+# Installé dans /etc/systemd/system par deploy/serveur/installer.sh.
+#
+# L'application tourne sous l'utilisateur gcn, sans privilège, et n'écrit que
+# dans son dossier logs/ (adresses bloquées par le middleware de sécurité).
+# Les secrets viennent de /opt/gcn-dashboard/.env, hors du dossier rsyncé :
+# un déploiement ne peut ni les lire par erreur ni les effacer.
+
+[Unit]
+Description=Tableau de bord gcn-data.fr (Node)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gcn
+Group=gcn
+WorkingDirectory=/opt/gcn-dashboard/app
+EnvironmentFile=/opt/gcn-dashboard/.env
+Environment=NODE_ENV=production
+Environment=PORT=8080
+ExecStart=/usr/bin/node server/server.js
+Restart=always
+RestartSec=3
+
+# Durcissement : système en lecture seule sauf le dossier de journaux.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/opt/gcn-dashboard/app/logs
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,48 @@
+# --- gcn-data.fr : tableau de bord ------------------------------------------
+# GÉNÉRÉ par deploy/serveur/generer-caddy.js depuis server/config/redirections.js.
+# Ne pas éditer à la main : relancer le script, puis installer.sh.
+#
+# L'application Node écoute sur 127.0.0.1:8080 (service systemd gcn-dashboard).
+# Elle pose elle-même ses en-têtes de sécurité (helmet, CSP comprise) : Caddy
+# n'en ajoute pas, deux CSP se cumuleraient en intersection et casseraient les
+# polices. Il retire seulement son nom et impose HTTPS.
+
+www.gcn-data.fr {
+	header -Server
+	redir https://gcn-data.fr{uri} permanent
+}
+
+gcn-data.fr {
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+	encode zstd gzip
+
+	# --- Anciennes URL publiques → gnaro.fr, en 301 -----------------------
+	# Articles migrés (slug ancien → slug gnaro.fr), avant le repli.
+	# (aucun pour l'instant : la carte ARTICLES est vide)
+	# Repli : tout autre article vers l'index du blog.
+	@blog path /blog /blog/ /blog/*
+	redir @blog https://gnaro.fr/blog/ permanent
+	# Pages fixes.
+	redir /projects https://gnaro.fr/projets/ permanent
+	redir /projects/ https://gnaro.fr/projets/ permanent
+	redir /stack https://gnaro.fr/projets/ permanent
+	redir /stack/ https://gnaro.fr/projets/ permanent
+	redir /rss.xml https://gnaro.fr/rss.xml permanent
+	redir /rss.xml/ https://gnaro.fr/rss.xml permanent
+	redir /sitemap.xml https://gnaro.fr/sitemap-index.xml permanent
+	redir /sitemap.xml/ https://gnaro.fr/sitemap-index.xml permanent
+
+	reverse_proxy 127.0.0.1:8080
+
+	# Journal d'accès : adresses IP, donc quatorze jours au plus, comme gnaro.fr.
+	log {
+		output file /var/log/caddy/gcn-data.log {
+			roll_size 10MiB
+			roll_keep 14
+			roll_keep_for 336h
+		}
+	}
+}

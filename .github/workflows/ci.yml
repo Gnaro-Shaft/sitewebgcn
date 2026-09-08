@@ -1,7 +1,7 @@
 # Intégration continue : tests unitaires, tests d'intégration (MongoDB en
 # service), build du client, lint.
 #
-# Le déploiement est ailleurs (deploy.yml, flyctl). Un job « docker » qui
+# Le déploiement est ailleurs (deploy.yml → deploy/deploy.sh, VPS OVH). Un job « docker » qui
 # poussait une image vers le registre Fly a été retiré le 5 septembre 2026 :
 # il faisait double emploi et échouait à chaque poussée depuis août (secret
 # d'application absent, connexion au registre refusée). Un job Snyk sans jeton,
