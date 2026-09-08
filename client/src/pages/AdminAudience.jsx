@@ -38,6 +38,10 @@ export default function AdminAudience() {
   }, [jours]);
 
   const maxVues = data ? Math.max(1, ...data.serie.map((j) => j.vues)) : 1;
+  // Les vues en navigation interne ne sont ventilées dans aucune origine :
+  // la somme des origines est inférieure au total des vues, et les parts
+  // affichées ci-dessous portent sur elle, pas sur les vues.
+  const entrees = data ? Object.values(data.origines).reduce((n, v) => n + v, 0) : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
@@ -120,7 +124,7 @@ export default function AdminAudience() {
                 <p className="mt-3 text-xs text-gray-400 dark:text-dark-muted">Colonne de droite : visites venues d'assistants IA · de moteurs · de LinkedIn.</p>
               </Carte>
 
-              <Carte titre="Origine des visites">
+              <Carte titre={`Origine des visites (${entrees} sur ${data.vues} vues)`}>
                 <Repartition items={ORIGINES.map(([k, label]) => [label, data.origines[k] || 0])} />
                 <h4 className="mt-6 mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-muted">Passages de robots d'indexation</h4>
                 <Repartition items={[['Robots des assistants IA', data.robots.ia || 0], ['Googlebot, Bingbot', data.robots.moteurs || 0]]} />
