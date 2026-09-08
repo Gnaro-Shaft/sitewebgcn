@@ -12,15 +12,6 @@ const handleValidation = (req, res, next) => {
   next();
 };
 
-// Contact form validation
-const validateContact = [
-  body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).withMessage('Name too long'),
-  body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
-  body('subject').optional().trim().isLength({ max: 200 }).withMessage('Subject too long'),
-  body('message').trim().notEmpty().withMessage('Message is required').isLength({ max: 5000 }).withMessage('Message too long (max 5000 chars)'),
-  handleValidation,
-];
-
 // Auth login validation
 const validateLogin = [
   body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
@@ -45,18 +36,8 @@ const validateProject = [
   handleValidation,
 ];
 
-// Article validation
-const validateArticle = [
-  body('title').trim().notEmpty().withMessage('Title is required').isLength({ max: 300 }),
-  body('content').trim().notEmpty().withMessage('Content is required').isLength({ max: 50000 }),
-  body('tags').optional().isArray().withMessage('Tags must be an array'),
-  handleValidation,
-];
-
 module.exports = {
-  validateContact,
   validateLogin,
   validateRegister,
   validateProject,
-  validateArticle,
 };

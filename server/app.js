@@ -8,7 +8,6 @@ if (process.env.NODE_ENV !== 'test') {
   require('dotenv').config({ override: true });
 }
 const path = require('path');
-const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -121,41 +120,21 @@ const authLimiter = makeLimiter({
   legacyHeaders: false,
 });
 
-const contactLimiter = makeLimiter({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: { success: false, error: 'Too many messages sent, please try again later' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'API is running' });
 });
 
-// Dynamic sitemap + RSS (must be before SPA fallback)
-app.get('/sitemap.xml', require('./controllers/sitemapController').getSitemap);
-app.get('/rss.xml', require('./controllers/rssController').getRssFeed);
-
 // Routes
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/projects', require('./routes/projects'));
-app.use('/api/articles', require('./routes/articles'));
-app.use('/api/contact', contactLimiter, require('./routes/contact'));
-app.use('/api/cv', require('./routes/cv'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/trading', require('./routes/trading'));
 app.use('/api/github', require('./routes/github'));
-app.use('/api/ai', require('./routes/ai'));
-app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/lighthouse', require('./routes/lighthouse'));
 app.use('/api/tiktok', require('./routes/tiktok'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/bot', require('./routes/bot'));
-app.use('/api/social', require('./routes/social'));
-app.use('/api/conversations', require('./routes/conversations'));
-app.use('/api/profile', require('./routes/profile'));
 app.use('/api/gnaro', require('./routes/gnaro'));
 
 // Serve React build in production
@@ -185,49 +164,12 @@ if (process.env.NODE_ENV === 'production') {
     },
   }));
 
-  // SPA fallback for non-API routes, avec injection des métadonnées.
-  //
-  // Les robots sociaux n'exécutent pas de JavaScript : sans cette étape ils
-  // reçoivent le même <title> et les mêmes og:* sur toutes les routes, et
-  // chaque article partagé sur LinkedIn affiche l'aperçu du portfolio.
-  const pageMeta = require('./services/pageMeta');
-  const Article = require('./models/Article');
+  // Repli SPA pour toute route hors API. Depuis septembre 2026 le site
+  // public vit sur gnaro.fr : il n'y a plus de métadonnées à injecter par
+  // page, le tableau de bord n'est pas fait pour être partagé ni indexé.
   const indexPath = path.join(distPath, 'index.html');
-
-  // Template lu une seule fois puis gardé en mémoire — pas d'I/O disque
-  // dans le chemin critique de chaque page.
-  let template = null;
-  function getTemplate() {
-    if (template === null) template = fs.readFileSync(indexPath, 'utf8');
-    return template;
-  }
-
-  app.get(/^(?!\/?api).*/, async (req, res) => {
+  app.get(/^(?!\/?api).*/, (req, res) => {
     res.set('Cache-Control', 'no-cache, must-revalidate');
-
-    try {
-      const pathname = req.path;
-      let meta = pageMeta.staticMetaFor(pathname);
-
-      // Article de blog : on résout le titre et l'extrait réels.
-      const articleMatch = pathname.match(/^\/blog\/([^/]+)\/?$/);
-      if (!meta && articleMatch) {
-        const slug = decodeURIComponent(articleMatch[1]);
-        const article = await Article.findOne({ slug, published: true })
-          .select('title excerpt slug tags publishedAt updatedAt createdAt')
-          .lean();
-        if (article) meta = pageMeta.articleMetaFrom(article);
-      }
-
-      if (meta) {
-        return res.type('html').send(pageMeta.injectMeta(getTemplate(), meta));
-      }
-    } catch (err) {
-      // Base injoignable ou template illisible : on ne casse pas la page,
-      // on retombe sur le fichier statique tel quel.
-      console.error('[pageMeta] injection ignorée:', err.message);
-    }
-
     res.sendFile(indexPath);
   });
 }
