@@ -43,7 +43,11 @@
     "noSignals": "No signals",
     "change24h": "24h change",
     "autoRefresh": "auto-refresh 60s",
-    "chart7d": "7-day chart"
+    "chart7d": "7-day chart",
+    "gnaroDrafts": "gnaro.fr drafts",
+    "audience": "gnaro.fr audience",
+    "lighthouse": "gnaro.fr Lighthouse",
+    "github": "GitHub"
   },
   "botStatus": {
     "live": "Live",

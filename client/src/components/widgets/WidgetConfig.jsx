@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ZONE_PAR_WIDGET, ZONES } from './zones';
 
 export default function WidgetConfig({ widgets, onSave, onClose }) {
   const { t } = useTranslation();
@@ -123,6 +124,9 @@ export default function WidgetConfig({ widgets, onSave, onClose }) {
 
               <span className={`flex-1 text-sm font-medium ${w.enabled ? 'text-gray-900 dark:text-dark-text' : 'text-gray-400 dark:text-dark-muted'}`}>
                 {t(`widgets.${w.id}`, w.label)}
+                <span className="ml-2 text-[10px] uppercase tracking-wider text-gray-400 dark:text-dark-muted">
+                  {ZONES.find((z) => z.id === ZONE_PAR_WIDGET[w.id])?.label}
+                </span>
               </span>
 
               <div className="flex gap-1">

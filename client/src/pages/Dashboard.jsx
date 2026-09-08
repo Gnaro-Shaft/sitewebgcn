@@ -12,33 +12,38 @@ import BotStatusWidget from '../components/widgets/BotStatusWidget';
 import DecisionLogWidget from '../components/widgets/DecisionLogWidget';
 import GnaroDraftsWidget from '../components/widgets/GnaroDraftsWidget';
 import AudienceWidget from '../components/widgets/AudienceWidget';
+import LighthouseWidget from '../components/widgets/LighthouseWidget';
+import { ZONES, ZONE_PAR_WIDGET } from '../components/widgets/zones';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 
+// Ordre par défaut : zone Gnaro d'abord (voir widgets/zones.js).
 const DEFAULT_WIDGETS = [
-  { id: 'botStatus', label: 'Bot Status', enabled: true },
-  { id: 'crypto', label: 'Crypto Live', enabled: true },
+  { id: 'gnaroDrafts', label: 'gnaro.fr', enabled: true },
+  { id: 'audience', label: 'Audience gnaro.fr', enabled: true },
+  { id: 'lighthouse', label: 'Lighthouse', enabled: true },
   { id: 'github', label: 'GitHub Stats', enabled: true },
+  { id: 'botStatus', label: 'Bot Status', enabled: true },
   { id: 'trades', label: 'Trades', enabled: true },
   { id: 'performance', label: 'Algo Performance', enabled: true },
   { id: 'signals', label: 'Signals', enabled: true },
   { id: 'decisions', label: 'Decision Log', enabled: true },
-  { id: 'gnaroDrafts', label: 'gnaro.fr', enabled: true },
-  { id: 'audience', label: 'Audience gnaro.fr', enabled: true },
+  { id: 'crypto', label: 'Crypto Live', enabled: true },
 ];
 
 const WIDGET_COMPONENTS = {
-  botStatus: BotStatusWidget,
-  crypto: CryptoWidget,
+  gnaroDrafts: GnaroDraftsWidget,
+  audience: AudienceWidget,
+  lighthouse: LighthouseWidget,
   github: GitHubStatsWidget,
+  botStatus: BotStatusWidget,
   trades: TradesWidget,
   performance: PerformanceWidget,
   signals: SignalsWidget,
   decisions: DecisionLogWidget,
-  gnaroDrafts: GnaroDraftsWidget,
-  audience: AudienceWidget,
+  crypto: CryptoWidget,
 };
 
 export default function Dashboard() {
@@ -114,6 +119,16 @@ export default function Dashboard() {
             <ThemeToggle />
             <LanguageSwitcher />
             <a
+              href="/admin/gnaro"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
+              title="Brouillons gnaro.fr"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              gnaro.fr
+            </a>
+            <a
               href="/admin/audience"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
               title="Audience gnaro.fr"
@@ -179,10 +194,23 @@ export default function Dashboard() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activeWidgets.map((w) => {
-              const Component = WIDGET_COMPONENTS[w.id];
-              return Component ? <Component key={w.id} /> : null;
+          <div className="space-y-10">
+            {ZONES.map((zone) => {
+              const siens = activeWidgets.filter((w) => ZONE_PAR_WIDGET[w.id] === zone.id);
+              if (siens.length === 0) return null;
+              return (
+                <section key={zone.id} aria-labelledby={`zone-${zone.id}`}>
+                  <h2 id={`zone-${zone.id}`} className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-dark-muted">
+                    {zone.label}
+                  </h2>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {siens.map((w) => {
+                      const Component = WIDGET_COMPONENTS[w.id];
+                      return Component ? <Component key={w.id} /> : null;
+                    })}
+                  </div>
+                </section>
+              );
             })}
           </div>
         )}

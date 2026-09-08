@@ -43,7 +43,11 @@
     "noSignals": "Aucun signal",
     "change24h": "Variation 24h",
     "autoRefresh": "actualisation auto 60s",
-    "chart7d": "Graphique 7 jours"
+    "chart7d": "Graphique 7 jours",
+    "gnaroDrafts": "Brouillons gnaro.fr",
+    "audience": "Audience gnaro.fr",
+    "lighthouse": "Lighthouse gnaro.fr",
+    "github": "GitHub"
   },
   "botStatus": {
     "live": "En ligne",
