@@ -1,29 +1,24 @@
-# n8n sur homeserv01 — Setup complet
+# n8n sur homeserv01 — installation
 
-Guide de mise en place de l'automatisation LinkedIn Phase 24 : n8n tourne
-sur homeserv01 en Tailscale-only, poll `gcn-data.fr/api/social/pending`
-toutes les 5 min, poste sur LinkedIn + commente avec le lien blog, puis
-notifie Fly du succès.
+n8n tourne sur homeserv01 en Tailscale-only. Ce document couvre son
+installation : dossier, `.env`, démarrage, exposition HTTPS, sauvegarde.
 
-> **Ce que n8n poste depuis août 2026.** Le workflow est inchangé — il lit
-> toujours `{ text, firstComment }` sur `/api/social/pending`. Ce qui a
-> changé est en amont : ces deux champs ne sont plus construits à partir de
-> l'article. Ils sont **écrits à la main** dans le composeur du tableau de
-> bord (`/admin/drafts` → un article publié → « Écrire le post »), et c'est
-> le seul geste qui met quelque chose dans la file.
->
-> Publier un article n'enfile plus rien, et le brouillon hebdomadaire du
-> cron non plus. Motif : le texte était le début de l'article suivi d'une
-> tagline constante, donc chaque post avait la même forme. La portée est
-> tombée de 759 à 28 impressions au fil de la série.
->
-> Conséquence pratique : **une file vide est le cas nominal**. Si tu ne vois
-> rien partir, ce n'est pas une panne.
+**Ce que n8n fait tourner** est documenté dans le dépôt du site qu'il sert,
+`gnaro/deploy/n8n/` : brouillon d'article, proposition de post et bilan
+LinkedIn, veille. Tous parlent au Mac ou à Telegram, aucun n'appelle
+gcn-data.fr.
+
+> **Historique.** n8n a été installé en août 2026 (phase 24) pour une file
+> LinkedIn qui interrogeait `gcn-data.fr/api/social/pending` toutes les
+> cinq minutes. Cette file a été supprimée le 8 septembre 2026 avec le blog
+> de gcn-data.fr, devenu tableau de bord personnel ; le workflow n'existe
+> plus dans n8n et les identifiants LinkedIn créés pour lui (app
+> « GCN Blog Auto-Poster », credential Header Auth « Fly n8n secret »)
+> peuvent être révoqués.
 
 **Prérequis :**
 - Ubuntu + Docker + docker compose plugin ✓ (déjà en place)
 - Tailscale installé et enrôlé ✓ (déjà en place)
-- Un compte LinkedIn perso (celui d'où partiront les posts)
 
 ---
 
@@ -51,7 +46,7 @@ tailscale status | head -2
 ```
 
 **⚠️ Sauvegarde `N8N_ENCRYPTION_KEY` ailleurs (password manager).**
-Si tu le perds ET que tu wipes `n8n_data/`, tes credentials LinkedIn stored dans n8n sont irrécupérables.
+Si tu le perds ET que tu wipes `n8n_data/`, les credentials stockés dans n8n (Telegram, jetons vers le Mac) sont irrécupérables.
 
 ## 2. Démarrer n8n
 
@@ -95,117 +90,7 @@ Depuis ton laptop (sur Tailscale), ouvre `https://<hostname>.<tailnet>.ts.net` d
 - n8n te propose une usage overview → skip
 - Tu es dans le dashboard n8n
 
-## 5. Créer l'app LinkedIn Developer
-
-C'est le morceau le plus pénible — LinkedIn a des workflows d'approbation lents pour certains produits. Mais "Share on LinkedIn" est généralement auto-approuvé pour un usage personnel.
-
-1. Va sur https://www.linkedin.com/developers/apps
-2. Clique **Create app**
-3. Remplis :
-   - **App name** : `GCN Blog Auto-Poster`
-   - **LinkedIn Page** : ta page perso (ou une page entreprise si tu en as une). Si tu n'as pas de Page dédiée, tu peux en créer une en 30 sec sur LinkedIn.
-   - **Privacy policy URL** : `https://gcn-data.fr` (ou n'importe quelle URL de ton site — LinkedIn ne vérifie pas le contenu)
-   - **App logo** : n'importe quelle image PNG carrée
-   - Coche les 2 checkboxes T&C
-4. Clique **Create app**
-
-### Configurer l'auth
-
-- Onglet **Auth** :
-  - **OAuth 2.0 redirect URLs** → ajoute : `https://<hostname>.<tailnet>.ts.net/rest/oauth2-credential/callback`
-  - Copie **Client ID** + **Client Secret** (clique le petit œil sur secret pour révéler)
-
-### Activer les produits
-
-- Onglet **Products** :
-  - Add **Share on LinkedIn** → généralement approuvé instantanément
-  - Add **Sign In with LinkedIn using OpenID Connect** → également instant
-
-**Note** : si tu veux poster au nom d'une Company Page (pas ton profil perso), il te faut le produit `Community Management API` qui nécessite une candidature LinkedIn avec délai. Pour un usage perso, on reste sur "Share on LinkedIn".
-
-### Autoriser les scopes
-
-Retourne dans **Auth** → tu devrais voir maintenant les OAuth 2.0 scopes disponibles :
-- `openid`
-- `profile`
-- `email`
-- `w_member_social` ← le scope critique pour poster
-
-Ces scopes sont utilisables dès qu'ils apparaissent dans la liste.
-
-## 6. Créer les credentials LinkedIn dans n8n
-
-- Dans n8n → menu de gauche → **Credentials** → **+ Add Credential**
-- Choisis **LinkedIn OAuth2 API**
-- Remplis :
-  - **Client ID** : ce que tu as copié depuis LinkedIn Auth
-  - **Client Secret** : idem
-  - **Scope** : `w_member_social openid profile email`
-- Clique **Sign in with LinkedIn**
-- Popup LinkedIn → login → autorise → redirection vers ton n8n → "Connected"
-- Save
-
-## 7. Créer les credentials HTTP pour l'API Fly
-
-Pour authentifier les appels vers `gcn-data.fr/api/social/*` :
-
-- **Credentials** → **+ Add** → **Header Auth**
-- **Name** : `Fly n8n secret`
-- **Header Name** : `X-N8N-Secret`
-- **Header Value** : *le secret `N8N_SHARED_SECRET` que tu as ajouté aux Fly secrets*
-- Save
-
-## 8. Importer le workflow
-
-Deux options :
-
-**Option A — Import du JSON** (rapide)
-- Menu → **Workflows** → **+ Add workflow** → menu 3 points en haut à droite → **Import from File**
-- Sélectionne `workflows/linkedin-poll.json` (fourni dans ce même dossier)
-- Ouvre chaque noeud pour affecter les credentials (n8n ne les importe pas — sécurité)
-
-**Option B — Construction manuelle** (voir section 9 ci-dessous)
-
-Une fois importé/construit :
-- Clique le toggle **Active** en haut à droite → workflow armé
-
-## 9. Structure du workflow (si tu construis manuellement)
-
-```
-[Schedule Trigger 5min]
-        ↓
-[HTTP Request : GET pending] ─ credentials Header Auth
-        ↓
-[IF count > 0] → sortie "true"
-        ↓
-[Split In Batches (1)]  ← itère item par item pour éviter les rate limits
-        ↓
-[LinkedIn : Create Post] ─ credentials LinkedIn OAuth2
-   text = {{ $json.text }}
-        ↓
-[HTTP Request : Comment on post] ─ credentials LinkedIn OAuth2 (Custom Auth)
-   POST https://api.linkedin.com/v2/socialActions/{{ $node["LinkedIn"].json.id }}/comments
-   Body: {"actor":"{{ $node[LinkedIn].json.author }}","message":{"text":"{{ $node[Split].json.firstComment }}"}}
-        ↓
-[HTTP Request : mark-posted] ─ credentials Header Auth
-   POST https://gcn-data.fr/api/social/mark-posted
-   Body: {"articleId":"...","platform":"linkedin","postUrn":"...","commentUrn":"..."}
-
-Sur erreur (Error Trigger connecté aux 3 dernières boîtes) :
-[HTTP Request : mark-failed] ─ credentials Header Auth
-```
-
-Petit détail : le noeud LinkedIn Create Post renvoie un `id` qui EST l'URN du post — l'utiliser directement dans l'URL du commentaire.
-
-## 10. Premier test
-
-1. Sur `gcn-data.fr` admin → publie un article (ou marque un existant comme `queued` via ta Mongo Atlas directement)
-2. Dans n8n → ouvre le workflow → clique **Execute Workflow** manuellement
-3. Vérifie chaque noeud → clic droit sur le noeud → "Show input/output"
-4. Si LinkedIn Node passe et Comment passe → vérifie sur LinkedIn que le post + commentaire sont bien là
-5. Vérifie que l'article est marqué `posted` : `curl -H "X-N8N-Secret: $SECRET" https://gcn-data.fr/api/social/pending?platform=linkedin` → doit être vide
-
-## 11. Backup
+## 5. Backup
 
 Nightly cron sur homeserv01 :
 
@@ -228,24 +113,17 @@ crontab -e
 0 4 * * * /home/YOU/services/n8n/backup.sh >> /home/YOU/services/n8n/backup.log 2>&1
 ```
 
-## 12. Troubleshooting
-
-**"Callback URL mismatch"** en OAuth LinkedIn → vérifie que l'URL dans LinkedIn Auth EST EXACTEMENT celle demandée par n8n dans le popup. Souvent un slash final manquant.
-
-**Workflow qui tourne mais rien ne se poste** → clique sur le noeud LinkedIn dans l'exécution → onglet Output → LinkedIn API a probablement renvoyé une erreur explicite (`403 forbidden` → scope manquant, `401 unauthorized` → token expiré → re-connect les credentials).
-
-**n8n log spam "signature verification failed"** → tu as un LINKEDIN_WEBHOOK_URL qui traîne quelque part et fait des appels vers n8n. Nettoie.
+## 6. Troubleshooting
 
 **Basic auth loop infini** → cache navigateur, purge cookies homeserv01.YOUR-TAILNET.ts.net et retente.
 
-## 13. Résumé des credentials à avoir sous la main
+## 7. Résumé des credentials à avoir sous la main
 
 | Credential | Où c'est stocké |
 |---|---|
 | `N8N_ENCRYPTION_KEY` | ~/services/n8n/.env + password manager |
 | `N8N_BASIC_AUTH_PASSWORD` | ~/services/n8n/.env + password manager |
 | Owner account n8n (email + pwd) | password manager |
-| LinkedIn Client ID + Secret | LinkedIn Developer console + password manager |
-| `N8N_SHARED_SECRET` (Fly ↔ n8n) | Fly secrets + n8n Header Auth credential |
 
-**5 secrets à gérer.** Cohérent avec la doctrine "un secret par frontière de trust".
+**3 secrets à gérer.** Les identifiants propres à chaque workflow sont
+listés dans `gnaro/deploy/n8n/README.md`.
