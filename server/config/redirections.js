@@ -1,7 +1,13 @@
 // Table des redirections 301 des anciennes URL publiques de gcn-data.fr vers
 // gnaro.fr, le site public depuis le 2 septembre 2026.
 //
-// Deux couches, appliquées dans cet ordre par le middleware :
+// Cette table ne sert plus à Express : c'est Caddy, sur le VPS, qui redirige
+// avant même d'atteindre l'application, avec le bloc que
+// deploy/serveur/generer-caddy.js génère d'ici. Un middleware Express l'a
+// appliquée entre le 8 septembre 2026 et l'arrêt de Fly, le même jour.
+// Modifier la table, relancer le générateur, rejouer preparer.sh.
+//
+// Deux couches, dans cet ordre :
 //   1. PAGES     — chemins fixes, destination connue une fois pour toutes.
 //   2. ARTICLES  — ancien slug → slug gnaro.fr, à remplir au fil du tri
 //                  éditorial. Un slug absent de cette carte tombe sur le
@@ -17,9 +23,6 @@
 // slugs compris (champ migration.oldSlugs de l'export), vers le nom du
 // fichier déposé dans src/content/blog du dépôt gnaro.
 //
-// Ces règles passeront dans le Caddyfile du VPS à la migration
-// d'hébergement ; cette table en restera la source.
-
 const GNARO = 'https://gnaro.fr';
 
 const PAGES = {
@@ -36,9 +39,9 @@ const ARTICLES = {};
 const REPLI_BLOG = `${GNARO}/blog/`;
 
 // Destination pour un chemin donné, ou null si le chemin n'est pas une
-// ancienne URL publique. Le chemin arrive tel que l'a vu Express (req.path),
-// sans chaîne de requête : elle est volontairement perdue, rien côté gnaro.fr
-// ne la lirait.
+// ancienne URL publique. Référence testable de la règle ; Caddy en est la
+// traduction. La chaîne de requête est volontairement perdue, rien côté
+// gnaro.fr ne la lirait.
 function destinationPour(chemin) {
   const sansSlashFinal = chemin.length > 1 ? chemin.replace(/\/+$/, '') : chemin;
   if (PAGES[sansSlashFinal]) return PAGES[sansSlashFinal];

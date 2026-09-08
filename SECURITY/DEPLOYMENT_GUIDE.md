@@ -1,3 +1,9 @@
+> **Document de l'ère Fly.io, obsolète depuis le 8 septembre 2026.** gcn-data.fr
+> est devenu un tableau de bord personnel hébergé sur le VPS OVH (Node sous
+> systemd derrière Caddy, voir `deploy/`). Les commandes `fly …`, les routes du
+> site public et les procédures décrites ici ne s'appliquent plus. Conservé
+> pour l'historique ; à réécrire ou supprimer.
+
 # 🚀 DÉPLOIEMENT SÉCURITÉ - GUIDE RAPIDE
 
 ## ✅ MODIFICATIONS APPLIQUÉES

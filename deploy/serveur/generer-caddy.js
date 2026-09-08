@@ -1,10 +1,9 @@
 // Génère deploy/serveur/Caddyfile.gcn-data, le bloc Caddy du tableau de bord
 // sur le VPS, à partir de la table server/config/redirections.js.
 //
-// La table est la source unique des redirections 301 : Express l'applique
-// tant que l'application tourne sur Fly, Caddy l'appliquera sur le VPS
-// avant même d'atteindre l'application. Ce script évite que les deux
-// divergent ; un test vérifie que le fichier commité est à jour.
+// La table est la source unique des redirections 301, et Caddy leur seul
+// exécutant : il redirige avant même d'atteindre l'application. Un test
+// vérifie que le fichier commité est à jour avec la table.
 //
 //   node deploy/serveur/generer-caddy.js          écrit le fichier
 //   node deploy/serveur/generer-caddy.js --stdout  affiche seulement

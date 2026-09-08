@@ -1,14 +1,10 @@
-// Redirections des anciennes URL publiques vers gnaro.fr : table pure, puis
-// middleware monté dans une application Express nue (pas de base, pas de
-// réseau). Une route témoin derrière le middleware prouve qu'il laisse
-// passer ce qui ne le concerne pas.
+// Table des redirections 301 : la fonction destinationPour est la référence
+// lisible de la règle que Caddy applique (bloc généré par generer-caddy.js,
+// testé dans caddyRedirections.test.js).
 
 import { describe, it, expect } from 'vitest';
-import express from 'express';
-import request from 'supertest';
 
 const { destinationPour, ARTICLES, REPLI_BLOG } = require('../config/redirections');
-const { redirectionsGnaro } = require('../middleware/redirectionsGnaro');
 
 describe('destinationPour', () => {
   it('connaît les pages fixes, avec ou sans slash final', () => {
@@ -48,41 +44,6 @@ describe('destinationPour', () => {
   it('ignore tout le reste', () => {
     for (const c of ['/', '/login', '/dashboard', '/admin/gnaro', '/robots.txt', '/blogue', '/blog-2', '/api/blog', '/projectsX']) {
       expect(destinationPour(c)).toBeNull();
-    }
-  });
-});
-
-describe('middleware redirectionsGnaro', () => {
-  const app = express();
-  app.use(redirectionsGnaro);
-  app.all(/.*/, (req, res) => res.status(200).send(`passe:${req.method}:${req.path}`));
-
-  it('répond 301 vers gnaro.fr, chaîne de requête perdue, cache d’un jour', async () => {
-    const r = await request(app).get('/blog/mon-article?utm_source=linkedin');
-    expect(r.status).toBe(301);
-    expect(r.headers.location).toBe('https://gnaro.fr/blog/');
-    expect(r.headers['cache-control']).toBe('public, max-age=86400');
-  });
-
-  it('redirige aussi HEAD', async () => {
-    const r = await request(app).head('/projects');
-    expect(r.status).toBe(301);
-    expect(r.headers.location).toBe('https://gnaro.fr/projets/');
-  });
-
-  it('laisse passer POST, PUT et DELETE sur une ancienne URL', async () => {
-    for (const m of ['post', 'put', 'delete']) {
-      const r = await request(app)[m]('/blog/mon-article');
-      expect(r.status).toBe(200);
-      expect(r.text).toMatch(/^passe:/);
-    }
-  });
-
-  it('ne touche jamais à /api ni aux pages du tableau de bord', async () => {
-    for (const c of ['/api/projects', '/api/blog', '/dashboard', '/login', '/']) {
-      const r = await request(app).get(c);
-      expect(r.status).toBe(200);
-      expect(r.text).toBe(`passe:GET:${c}`);
     }
   });
 });

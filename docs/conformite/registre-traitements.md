@@ -53,11 +53,10 @@ Ces traitements appartenaient au site public. Le code a été retiré
    collections purgées jusqu'à expiration de leur rétention. À vérifier dans
    la console Atlas ; `BACKUP_SECURITY.md` décrit une sauvegarde qui n'a pas
    été confirmée.
-3. **Journaux applicatifs sur Fly** : l'ancien site a journalisé des
-   adresses IP (morgan, format combined). Les machines Fly sont éphémères,
-   les journaux disparaissent avec elles ; à confirmer à l'arrêt de Fly.
-   Sur le VPS, le même journal est borné à quatorze jours depuis le
-   8 septembre 2026.
+3. **Journaux applicatifs sur Fly** : réglé. Les deux machines Fly ont été
+   détruites le 8 septembre 2026, leurs journaux avec elles. L'application
+   Fly existe encore, sans machine ; ses secrets seront purgés à sa
+   suppression. Sur le VPS, le même journal est borné à quatorze jours.
 
 ## Droits des personnes
 
