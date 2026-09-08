@@ -13,7 +13,6 @@ import NotFound from './pages/NotFound';
 // d'administration, toutes derrière le login.
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminGnaro = lazy(() => import('./pages/AdminGnaro'));
-const AdminProjects = lazy(() => import('./pages/AdminProjects'));
 const TikTokStudio = lazy(() => import('./pages/TikTokStudio'));
 
 function protege(page) {
@@ -37,7 +36,6 @@ export default function App() {
               {/* Brouillons du site gnaro.fr — stockés dans son dépôt Git,
                   pas en base : voir server/services/gnaroRepo.js */}
               <Route path="/admin/gnaro" element={protege(<AdminGnaro />)} />
-              <Route path="/admin/projects" element={protege(<AdminProjects />)} />
               <Route path="/admin/tiktok" element={protege(<TikTokStudio />)} />
 
               <Route path="*" element={<NotFound />} />

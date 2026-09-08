@@ -127,13 +127,10 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', authLimiter, require('./routes/auth'));
-app.use('/api/projects', require('./routes/projects'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/trading', require('./routes/trading'));
-app.use('/api/github', require('./routes/github'));
 app.use('/api/lighthouse', require('./routes/lighthouse'));
 app.use('/api/tiktok', require('./routes/tiktok'));
-app.use('/api/upload', require('./routes/upload'));
 app.use('/api/bot', require('./routes/bot'));
 app.use('/api/gnaro', require('./routes/gnaro'));
 
@@ -146,9 +143,6 @@ if (process.env.NODE_ENV === 'production') {
     immutable: true,
   }));
 
-  app.use('/images', express.static(path.join(distPath, 'images'), {
-    maxAge: '30d',
-  }));
 
   app.use(express.static(distPath, {
     maxAge: '1d',

@@ -17,8 +17,7 @@ login. Il ne reçoit aucun visiteur et n'a plus de formulaire public.
 | Journal de sécurité | adresse IP des requêtes bloquées, horodatage | tiers émettant des requêtes hostiles | protection contre la force brute et les abus | intérêt légitime (sécurité) | à fixer, voir écart n° 1 | aucun (fichier local au serveur) |
 | Journal des requêtes | adresse IP, chemin, agent utilisateur de chaque requête (morgan → journald) | toute personne joignant le serveur | diagnostic et sécurité | intérêt légitime | 14 jours (journald, `MaxRetentionSec`, posé par l'installateur) | aucun (VPS OVH) |
 
-Sans donnée personnelle, hors registre : projets (titres, liens publics),
-scores Lighthouse, données du bot de trading (positions, signaux), brouillons
+Sans donnée personnelle, hors registre : scores Lighthouse, données du bot de trading (positions, signaux), brouillons
 gnaro.fr (fichiers Markdown du dépôt, aucune donnée de personne).
 
 ## Sous-traitants
@@ -26,7 +25,6 @@ gnaro.fr (fichiers Markdown du dépôt, aucune donnée de personne).
 | Sous-traitant | Rôle | Localisation | Statut |
 | --- | --- | --- | --- |
 | MongoDB Atlas | base de données | AWS, région UE | DPA standard MongoDB, à archiver |
-| Cloudinary | images des projets (aucune donnée de personne) | UE/US selon le compte | à vérifier |
 | Fly.io, puis VPS OVH | hébergement de l'application | Paris (cdg), puis France (OVH) | DPA Fly standard ; OVH : contrat hébergeur |
 | GitHub | code, déploiement, appel hebdomadaire Lighthouse | US | aucune donnée de personne transmise |
 
@@ -43,6 +41,7 @@ Ces traitements appartenaient au site public. Le code a été retiré
 | Blog (articles) | textes, aucune donnée de personne hors l'auteur | exportés en Markdown hors dépôt, collection supprimée |
 | Formulaire de contact | nom, e-mail, message — envoyés par e-mail, jamais stockés en base | route supprimée |
 | File LinkedIn | identifiants de posts, aucune donnée de personne | supprimée avec le blog |
+| Projets (collection `projects`, images sur Cloudinary) | titres, descriptions et liens publics de projets personnels, aucune donnée de personne | code retiré le 8 septembre 2026 (7a) ; collection à purger, compte Cloudinary à fermer |
 
 ## Écarts connus
 

@@ -1,7 +1,4 @@
 {
-  "projects": {
-    "featured": "Signature project"
-  },
   "login": {
     "title": "Dashboard",
     "subtitle": "Sign in to access your cockpit",
@@ -78,48 +75,6 @@
     "score": "Score",
     "status": "Status",
     "motif": "Reason"
-  },
-  "admin": {
-    "upload": {
-      "dragHere": "Drag an image here",
-      "choose": "or click to choose a file",
-      "uploading": "Uploading…",
-      "preview": "Preview",
-      "dragToReplace": "Drag a new image to replace",
-      "remove": "Remove image",
-      "externalUrl": "Or paste an external URL",
-      "tooLarge": "File too large (max 5 MB)",
-      "invalidType": "Unsupported file type (PNG, JPG, WebP, GIF only)",
-      "notConfigured": "Upload service is not configured on the server",
-      "error": "Upload failed, please try again"
-    }
-  },
-  "adminProjects": {
-    "title": "Project management",
-    "public": "Public",
-    "hidden": "Hidden",
-    "noPublic": "No public projects",
-    "noHidden": "No hidden projects",
-    "selectToPreview": "Select a project to preview",
-    "live": "Live",
-    "hiddenStatus": "Hidden",
-    "hide": "Hide",
-    "publish": "Publish",
-    "longDescription": "Long description",
-    "highlights": "Highlights",
-    "isPublic": "Publish on site",
-    "featured": "Signature project (★)",
-    "importGithub": "Import from GitHub",
-    "noNewRepos": "All your public GitHub repos are already imported or hidden.",
-    "selectReposHelp": "Select repos to import. They will be created as hidden — enrich them then publish.",
-    "selected": "selected",
-    "importSelected": "Import",
-    "deleteConfirm": "Permanently delete this project?"
-  },
-  "drafts": {
-    "edit": "Edit",
-    "editing": "Edit mode",
-    "delete": "Delete"
   },
   "notFound": {
     "title": "Page not found",

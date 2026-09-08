@@ -26,18 +26,7 @@ const validateRegister = [
   handleValidation,
 ];
 
-// Project validation
-const validateProject = [
-  body('title').trim().notEmpty().withMessage('Title is required').isLength({ max: 200 }),
-  body('description').optional().trim().isLength({ max: 2000 }),
-  body('githubUrl').optional().trim().isURL().withMessage('Invalid GitHub URL'),
-  body('liveUrl').optional().trim().isURL().withMessage('Invalid live URL'),
-  body('stack').optional().isArray().withMessage('Stack must be an array'),
-  handleValidation,
-];
-
 module.exports = {
   validateLogin,
   validateRegister,
-  validateProject,
 };
