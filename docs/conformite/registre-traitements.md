@@ -41,7 +41,7 @@ Ces traitements appartenaient au site public. Le code a été retiré
 | Blog (articles) | textes, aucune donnée de personne hors l'auteur | exportés en Markdown hors dépôt, collection supprimée |
 | Formulaire de contact | nom, e-mail, message — envoyés par e-mail, jamais stockés en base | route supprimée |
 | File LinkedIn | identifiants de posts, aucune donnée de personne | supprimée avec le blog |
-| Projets (collection `projects`, images sur Cloudinary) | titres, descriptions et liens publics de projets personnels, aucune donnée de personne | code retiré le 8 septembre 2026 (7a) ; collection à purger, compte Cloudinary à fermer |
+| Projets (collection `projects`, images sur Cloudinary) | titres, descriptions et liens publics de projets personnels, aucune donnée de personne | code retiré et collection supprimée le 8 septembre 2026 ; compte Cloudinary à fermer par le responsable |
 
 ## Écarts connus
 
