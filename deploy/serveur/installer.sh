@@ -72,6 +72,23 @@ systemctl enable gcn-dashboard.service >/dev/null 2>&1
 # Pas de démarrage ici : l'application n'est pas encore déployée. Le premier
 # deploy.sh la lance.
 
+echo "→ Journal système : rétention de quatorze jours"
+# Express journalise chaque requête avec l'adresse IP du client (morgan,
+# format combined) et ces lignes vont dans journald. Une adresse IP est une
+# donnée personnelle : même durée que les journaux d'accès Caddy de gnaro.fr,
+# quatorze jours, annoncée dans docs/conformite/registre-traitements.md.
+# Le réglage vaut pour tout le journal de la machine.
+install -d -m 755 /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/retention.conf <<JOURNAL
+# Posé par siteWeb/deploy/serveur/installer.sh — voir registre des traitements.
+[Journal]
+MaxRetentionSec=14day
+SystemMaxUse=500M
+JOURNAL
+systemctl restart systemd-journald
+journalctl --vacuum-time=14d >/dev/null 2>&1 || true
+echo "   $(systemd-analyze cat-config systemd/journald.conf 2>/dev/null | grep -E '^MaxRetentionSec' | tail -1)"
+
 echo "→ Caddy : bloc gcn-data.fr"
 CADDYFILE=/etc/caddy/Caddyfile
 TMP="$(mktemp)"

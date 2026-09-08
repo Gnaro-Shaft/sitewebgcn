@@ -15,6 +15,7 @@ login. Il ne reçoit aucun visiteur et n'a plus de formulaire public.
 | Jetons de session | jeton de rafraîchissement, date d'expiration | idem | maintien de la session | idem | expiration automatique (index TTL) | MongoDB Atlas |
 | Comptes TikTok connectés | identifiant de compte, jetons OAuth, date d'expiration | idem, comptes qu'il administre | publication de vidéos depuis le studio | consentement (OAuth) | jusqu'à déconnexion du compte | MongoDB Atlas, TikTok |
 | Journal de sécurité | adresse IP des requêtes bloquées, horodatage | tiers émettant des requêtes hostiles | protection contre la force brute et les abus | intérêt légitime (sécurité) | à fixer, voir écart n° 1 | aucun (fichier local au serveur) |
+| Journal des requêtes | adresse IP, chemin, agent utilisateur de chaque requête (morgan → journald) | toute personne joignant le serveur | diagnostic et sécurité | intérêt légitime | 14 jours (journald, `MaxRetentionSec`, posé par l'installateur) | aucun (VPS OVH) |
 
 Sans donnée personnelle, hors registre : projets (titres, liens publics),
 scores Lighthouse, données du bot de trading (positions, signaux), brouillons
@@ -55,6 +56,8 @@ Ces traitements appartenaient au site public. Le code a été retiré
 3. **Journaux applicatifs sur Fly** : l'ancien site a journalisé des
    adresses IP (morgan, format combined). Les machines Fly sont éphémères,
    les journaux disparaissent avec elles ; à confirmer à l'arrêt de Fly.
+   Sur le VPS, le même journal est borné à quatorze jours depuis le
+   8 septembre 2026.
 
 ## Droits des personnes
 
