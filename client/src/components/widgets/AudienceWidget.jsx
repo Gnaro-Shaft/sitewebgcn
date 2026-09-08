@@ -45,7 +45,10 @@ export default function AudienceWidget() {
   if (erreur) return <Coque><WidgetError onRetry={charger} /><p className="mt-2 text-xs text-gray-400 dark:text-dark-muted">{erreur}</p></Coque>;
   if (!data || data.vide) return <Coque><p className="text-sm text-gray-400 dark:text-dark-muted">Aucune donnée d'audience.</p></Coque>;
 
-  const totalOrigines = Object.values(data.origines).reduce((n, v) => n + v, 0) || 1;
+  // Les vues en navigation interne (référent gnaro.fr) ne sont ventilées dans
+  // aucune origine : la somme ci-dessous est donc inférieure au total des vues.
+  const entrees = Object.values(data.origines).reduce((n, v) => n + v, 0);
+  const totalOrigines = entrees || 1;
 
   return (
     <Coque sousTitre={`${data.du} → ${data.au}`}>
@@ -54,6 +57,9 @@ export default function AudienceWidget() {
         <Case label="Contact" value={data.contact} />
         <Case label="7 j. préc." value={data.variation === null ? '—' : `${data.variation > 0 ? '+' : ''}${data.variation} %`} />
       </div>
+      <p className="mb-2 text-xs text-gray-500 dark:text-dark-muted">
+        Entrées par origine <span className="tabular-nums">({entrees} sur {data.vues} vues)</span>
+      </p>
       <ul className="space-y-1.5">
         {ORIGINES.map(([cle, label]) => {
           const v = data.origines[cle] || 0;
