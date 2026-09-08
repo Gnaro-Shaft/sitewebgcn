@@ -11,6 +11,7 @@ import SignalsWidget from '../components/widgets/SignalsWidget';
 import BotStatusWidget from '../components/widgets/BotStatusWidget';
 import DecisionLogWidget from '../components/widgets/DecisionLogWidget';
 import GnaroDraftsWidget from '../components/widgets/GnaroDraftsWidget';
+import AudienceWidget from '../components/widgets/AudienceWidget';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
 import ThemeToggle from '../components/ui/ThemeToggle';
@@ -25,6 +26,7 @@ const DEFAULT_WIDGETS = [
   { id: 'signals', label: 'Signals', enabled: true },
   { id: 'decisions', label: 'Decision Log', enabled: true },
   { id: 'gnaroDrafts', label: 'gnaro.fr', enabled: true },
+  { id: 'audience', label: 'Audience gnaro.fr', enabled: true },
 ];
 
 const WIDGET_COMPONENTS = {
@@ -36,6 +38,7 @@ const WIDGET_COMPONENTS = {
   signals: SignalsWidget,
   decisions: DecisionLogWidget,
   gnaroDrafts: GnaroDraftsWidget,
+  audience: AudienceWidget,
 };
 
 export default function Dashboard() {
@@ -110,6 +113,16 @@ export default function Dashboard() {
             <SessionTimer />
             <ThemeToggle />
             <LanguageSwitcher />
+            <a
+              href="/admin/audience"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
+              title="Audience gnaro.fr"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17l6-6 4 4 8-8M14 7h7v7" />
+              </svg>
+              Audience
+            </a>
             <a
               href="/admin/tiktok"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-dark-muted hover:text-accent border border-gray-200 dark:border-dark-border hover:border-accent rounded-lg transition-colors"
