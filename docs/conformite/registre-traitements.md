@@ -55,8 +55,7 @@ Ces traitements appartenaient au site public. Le code a été retiré
    été confirmée.
 3. **Journaux applicatifs sur Fly** : réglé. Les deux machines Fly ont été
    détruites le 8 septembre 2026, leurs journaux avec elles. L'application
-   Fly existe encore, sans machine ; ses secrets seront purgés à sa
-   suppression. Sur le VPS, le même journal est borné à quatorze jours.
+   Fly a été détruite le même jour, ses secrets avec elle. Sur le VPS, le même journal est borné à quatorze jours.
 
 ## Droits des personnes
 
