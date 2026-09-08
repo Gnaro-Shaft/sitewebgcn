@@ -19,6 +19,7 @@ WorkingDirectory=/opt/gcn-dashboard/app
 EnvironmentFile=/opt/gcn-dashboard/.env
 Environment=NODE_ENV=production
 Environment=PORT=8080
+Environment=HOST=127.0.0.1
 ExecStart=/usr/bin/node server/server.js
 Restart=always
 RestartSec=3

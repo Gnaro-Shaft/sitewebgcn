@@ -75,9 +75,16 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
   [ "$i" -lt 10 ] || { echo "✗ Le service ne démarre pas. Journal :" >&2; distant "sudo /usr/bin/journalctl -u gcn-dashboard.service -n 30 --no-pager" >&2; exit 1; }
   sleep 2
 done
+# Node met une à deux secondes à s'attacher au port après que systemd déclare
+# le service actif : on interroge la santé locale avec patience.
+code=000
+for i in $(seq 1 15); do
+  code="$(distant "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/health" 2>/dev/null || echo 000)"
+  [ "$code" = "200" ] && break
+  sleep 1
+done
+[ "$code" = "200" ] || { echo "✗ /api/health local répond $code après 15 s. Journal :" >&2; distant "sudo /usr/bin/journalctl -u gcn-dashboard.service -n 30 --no-pager" >&2; exit 1; }
 if [ "${DEPLOY_SKIP_CHECK:-}" = "1" ]; then
-  code="$(distant "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/health")"
-  [ "$code" = "200" ] || { echo "✗ /api/health local répond $code." >&2; exit 1; }
   echo "✓ Service actif, /api/health local en 200. Contrôle public sauté (DEPLOY_SKIP_CHECK=1)."
   exit 0
 fi

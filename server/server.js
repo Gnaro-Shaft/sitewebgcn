@@ -8,10 +8,14 @@ const app = require('./app');
 connectDB();
 connectBotDB();
 
-// Fly.io expects port 8080 (configured in fly.toml)
+// Port 8080 par défaut. HOST permet de n'écouter que sur l'adresse locale :
+// sur le VPS, Caddy est le seul à devoir joindre l'application (l'unité
+// systemd fixe HOST=127.0.0.1). Sans HOST, toutes les interfaces, comme
+// l'attendait Fly.
 const PORT = process.env.PORT || 8080;
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} [${process.env.NODE_ENV}]`);
+const HOST = process.env.HOST || '0.0.0.0';
+const server = app.listen(PORT, HOST, () => {
+  console.log(`Server running on ${HOST}:${PORT} [${process.env.NODE_ENV}]`);
 });
 
 process.on('SIGTERM', () => {
