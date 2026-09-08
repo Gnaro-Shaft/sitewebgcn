@@ -48,7 +48,8 @@
     "audience": "gnaro.fr audience",
     "lighthouse": "gnaro.fr Lighthouse",
     "github": "GitHub",
-    "citations": "AI citations"
+    "citations": "AI citations",
+    "sujets": "Proposed topics"
   },
   "botStatus": {
     "live": "Live",

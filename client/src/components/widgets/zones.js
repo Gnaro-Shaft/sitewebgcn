@@ -10,6 +10,6 @@ export const ZONES = [
 ];
 
 export const ZONE_PAR_WIDGET = {
-  gnaroDrafts: 'gnaro', audience: 'gnaro', citations: 'gnaro', lighthouse: 'gnaro', github: 'gnaro',
+  gnaroDrafts: 'gnaro', sujets: 'gnaro', audience: 'gnaro', citations: 'gnaro', lighthouse: 'gnaro', github: 'gnaro',
   botStatus: 'trading', trades: 'trading', performance: 'trading', signals: 'trading', decisions: 'trading', crypto: 'trading',
 };

@@ -6,6 +6,7 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const gnaro = require('../services/gnaroRepo');
 const citationsIa = require('../services/citationsIa');
+const sujetsProposes = require('../services/sujetsProposes');
 
 // GET /api/gnaro/drafts
 const listerBrouillons = asyncHandler(async (req, res) => {
@@ -42,8 +43,17 @@ const citations = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+// GET /api/gnaro/sujets — dernière proposition de sujets du pipeline
+// (docs/suivi/sujets-proposes.json), ou { absente: true } tant qu'aucune
+// n'a été publiée.
+const sujets = asyncHandler(async (req, res) => {
+  const data = await sujetsProposes.derniere();
+  res.json({ success: true, data });
+});
+
 module.exports = {
   citations,
+  sujets,
   listerBrouillons,
   publierBrouillon,
   supprimerBrouillon,

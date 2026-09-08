@@ -14,6 +14,7 @@ import GnaroDraftsWidget from '../components/widgets/GnaroDraftsWidget';
 import AudienceWidget from '../components/widgets/AudienceWidget';
 import LighthouseWidget from '../components/widgets/LighthouseWidget';
 import CitationsWidget from '../components/widgets/CitationsWidget';
+import SujetsWidget from '../components/widgets/SujetsWidget';
 import { ZONES, ZONE_PAR_WIDGET } from '../components/widgets/zones';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
@@ -23,6 +24,7 @@ import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 // Ordre par défaut : zone Gnaro d'abord (voir widgets/zones.js).
 const DEFAULT_WIDGETS = [
   { id: 'gnaroDrafts', label: 'gnaro.fr', enabled: true },
+  { id: 'sujets', label: 'Sujets proposés', enabled: true },
   { id: 'audience', label: 'Audience gnaro.fr', enabled: true },
   { id: 'citations', label: 'Citations IA', enabled: true },
   { id: 'lighthouse', label: 'Lighthouse', enabled: true },
@@ -37,6 +39,7 @@ const DEFAULT_WIDGETS = [
 
 const WIDGET_COMPONENTS = {
   gnaroDrafts: GnaroDraftsWidget,
+  sujets: SujetsWidget,
   audience: AudienceWidget,
   citations: CitationsWidget,
   lighthouse: LighthouseWidget,
