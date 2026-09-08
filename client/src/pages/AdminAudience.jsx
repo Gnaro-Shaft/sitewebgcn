@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import CitationsGrille from '../components/CitationsGrille';
 
 const PERIODES = [7, 30, 90, 365];
 const ORIGINES = [
@@ -144,6 +145,8 @@ export default function AdminAudience() {
             </Carte>
           </>
         )}
+
+        <CitationsGrille />
       </main>
     </div>
   );

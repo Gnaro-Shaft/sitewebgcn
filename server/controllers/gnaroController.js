@@ -5,6 +5,7 @@
 
 const asyncHandler = require('../middleware/asyncHandler');
 const gnaro = require('../services/gnaroRepo');
+const citationsIa = require('../services/citationsIa');
 
 // GET /api/gnaro/drafts
 const listerBrouillons = asyncHandler(async (req, res) => {
@@ -34,7 +35,15 @@ const supprimerBrouillon = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+// GET /api/gnaro/citations — relevé mensuel des citations par les assistants
+// d'IA, lu dans docs/suivi/citations.md du dépôt.
+const citations = asyncHandler(async (req, res) => {
+  const data = await citationsIa.citations();
+  res.json({ success: true, data });
+});
+
 module.exports = {
+  citations,
   listerBrouillons,
   publierBrouillon,
   supprimerBrouillon,

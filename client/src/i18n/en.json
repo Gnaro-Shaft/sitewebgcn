@@ -47,7 +47,8 @@
     "gnaroDrafts": "gnaro.fr drafts",
     "audience": "gnaro.fr audience",
     "lighthouse": "gnaro.fr Lighthouse",
-    "github": "GitHub"
+    "github": "GitHub",
+    "citations": "AI citations"
   },
   "botStatus": {
     "live": "Live",

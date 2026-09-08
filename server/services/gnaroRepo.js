@@ -155,6 +155,29 @@ async function lireFichier(nomFichier) {
 }
 
 /**
+ * Un fichier quelconque du dépôt, par son chemin depuis la racine
+ * (ex. « docs/suivi/citations.md »). Lecture seule : les écritures restent
+ * cantonnées au dossier des articles, c'est le périmètre du jeton.
+ */
+async function lireFichierDepot(chemin) {
+  const { repo, branche } = config();
+  const propre = String(chemin).replace(/^\/+/, '');
+  if (!propre || propre.split('/').some((seg) => seg === '..')) {
+    const e = new Error('Chemin de fichier invalide.');
+    e.statusCode = 400;
+    e.expose = true;
+    throw e;
+  }
+  const donnees = await appel(
+    `/repos/${repo}/contents/${propre.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(branche)}`
+  );
+  return {
+    sha: donnees.sha,
+    brut: Buffer.from(donnees.content || '', 'base64').toString('utf8'),
+  };
+}
+
+/**
  * Tous les brouillons du dépôt, du plus récent au plus ancien.
  *
  * Un appel pour lister le dossier, puis un par fichier — l'API GitHub ne
@@ -328,6 +351,7 @@ async function supprimer({ fichier, sha }) {
 }
 
 module.exports = {
+  lireFichierDepot,
   listerBrouillons,
   publier,
   supprimer,

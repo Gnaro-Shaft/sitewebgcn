@@ -13,6 +13,7 @@ import DecisionLogWidget from '../components/widgets/DecisionLogWidget';
 import GnaroDraftsWidget from '../components/widgets/GnaroDraftsWidget';
 import AudienceWidget from '../components/widgets/AudienceWidget';
 import LighthouseWidget from '../components/widgets/LighthouseWidget';
+import CitationsWidget from '../components/widgets/CitationsWidget';
 import { ZONES, ZONE_PAR_WIDGET } from '../components/widgets/zones';
 import WidgetConfig from '../components/widgets/WidgetConfig';
 import SessionTimer from '../components/SessionTimer';
@@ -23,6 +24,7 @@ import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 const DEFAULT_WIDGETS = [
   { id: 'gnaroDrafts', label: 'gnaro.fr', enabled: true },
   { id: 'audience', label: 'Audience gnaro.fr', enabled: true },
+  { id: 'citations', label: 'Citations IA', enabled: true },
   { id: 'lighthouse', label: 'Lighthouse', enabled: true },
   { id: 'github', label: 'GitHub Stats', enabled: true },
   { id: 'botStatus', label: 'Bot Status', enabled: true },
@@ -36,6 +38,7 @@ const DEFAULT_WIDGETS = [
 const WIDGET_COMPONENTS = {
   gnaroDrafts: GnaroDraftsWidget,
   audience: AudienceWidget,
+  citations: CitationsWidget,
   lighthouse: LighthouseWidget,
   github: GitHubStatsWidget,
   botStatus: BotStatusWidget,
