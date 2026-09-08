@@ -137,6 +137,11 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/bot', require('./routes/bot'));
 app.use('/api/gnaro', require('./routes/gnaro'));
 
+// Anciennes URL publiques (blog, projets, flux) → gnaro.fr, en 301. Avant
+// le repli SPA, sinon elles afficheraient la page 404 du tableau de bord et
+// les liens partagés sur LinkedIn mourraient. Table : config/redirections.js.
+app.use(require('./middleware/redirectionsGnaro').redirectionsGnaro);
+
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../client/dist');
