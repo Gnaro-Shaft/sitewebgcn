@@ -73,7 +73,7 @@ export default function CitationsGrille() {
                   })}
                   <td className="py-2 pl-3">
                     <span className="inline-flex gap-0.5" title={q.historique.map((h) => `${h.date} : ${h.citee ? 'citée' : 'non'}`).join('\n')}>
-                      {q.historique.map((h, i) => <span key={i} className={`inline-block w-2 h-2 rounded-sm ${h.citee ? 'bg-accent' : 'border border-gray-500'}`} />)}
+                      {q.historique.map((h, i) => <span key={i} className={`inline-block w-2 h-2 rounded-[1px] ${h.citee ? 'bg-accent' : 'border border-gray-500'}`} />)}
                     </span>
                   </td>
                 </tr>
