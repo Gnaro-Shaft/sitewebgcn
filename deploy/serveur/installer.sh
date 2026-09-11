@@ -130,7 +130,10 @@ fi
 # La validation porte sur le Caddyfile candidat, qui importe le conf.d qu'on
 # vient d'écrire : elle juge l'ensemble, pas notre bloc isolé. Sous
 # l'utilisateur caddy (en root elle créerait les journaux en root et le
-# service ne pourrait plus les ouvrir).
+# service ne pourrait plus les ouvrir). Le fichier de mktemp est en 600 pour
+# root : sans ce chmod, caddy ne peut pas le lire et la validation échoue
+# à coup sûr (constaté au premier déploiement, le 11 septembre 2026).
+chmod 644 "$TMP"
 if sudo -u caddy caddy validate --config "$TMP" --adapter caddyfile >/dev/null 2>&1; then
   install -o root -g root -m 644 "$TMP" "$CADDYFILE"
   systemctl reload caddy
