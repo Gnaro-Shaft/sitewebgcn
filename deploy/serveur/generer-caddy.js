@@ -1,5 +1,7 @@
 // Génère deploy/serveur/Caddyfile.gcn-data, le bloc Caddy du tableau de bord
-// sur le VPS, à partir de la table server/config/redirections.js.
+// sur le VPS, à partir de la table server/config/redirections.js. installer.sh
+// le dépose dans /etc/caddy/conf.d/gcn-data.caddy, importé par le Caddyfile de
+// gnaro : c'est le seul fichier Caddy que ce dépôt possède.
 //
 // La table est la source unique des redirections 301, et Caddy leur seul
 // exécutant : il redirige avant même d'atteindre l'application. Un test
