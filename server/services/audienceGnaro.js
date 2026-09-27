@@ -6,9 +6,12 @@
 // mesure rien lui-même. Sans les fichiers (poste de développement, autre
 // machine), la route répond 503 avec un message clair.
 //
-// Deux fichiers :
-//   audience.csv  jour, pages_vues, contact_vues, ref_<origine>…, robot_<nom>…
+// Trois fichiers :
+//   audience.csv  jour, pages_vues, contact_vues, ref_<origine>…, robot_<nom>…,
+//                 app_mobile, app_ordinateur, app_tablette (depuis le 27/09/2026)
 //   pages.csv     jour, page, vues
+//   heures.csv    jour, heure (0-23, heure de Paris), vues — facultatif : absent
+//                 avant le 27/09/2026, la page s'affiche sans la grille.
 
 const fs = require('fs/promises');
 const path = require('path');
@@ -30,6 +33,10 @@ const ROBOTS = {
   moteurs: ['robot_googlebot', 'robot_bingbot'],
 };
 
+// Colonnes lues comme du texte : des étiquettes, pas des comptes. Une heure
+// illisible ne doit pas devenir 0, c'est-à-dire minuit.
+const ETIQUETTES = new Set(['jour', 'page', 'heure']);
+
 // CSV → tableau d'objets. Tolère BOM, CRLF, lignes vides ; ignore une ligne
 // dont le nombre de colonnes ne correspond pas à l'en-tête plutôt que de tout
 // rejeter : un jour malformé ne doit pas cacher les autres.
@@ -44,7 +51,7 @@ function parserCsv(texte) {
     const o = {};
     colonnes.forEach((c, i) => {
       const v = cases[i].trim();
-      o[c] = c === 'jour' || c === 'page' ? v : Number(v);
+      o[c] = ETIQUETTES.has(c) ? v : Number(v);
       if (typeof o[c] === 'number' && !Number.isFinite(o[c])) o[c] = 0;
     });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(o.jour)) continue;
@@ -53,17 +60,19 @@ function parserCsv(texte) {
   return rangs.sort((a, b) => (a.jour < b.jour ? -1 : 1));
 }
 
+const APPAREILS = ['mobile', 'ordinateur', 'tablette'];
+
 const somme = (o, cles) => cles.reduce((n, c) => n + (o[c] || 0), 0);
 const total = (rangs, f) => rangs.reduce((n, r) => n + f(r), 0);
 
 // Résumé sur les `jours` derniers jours présents dans le fichier, comparé à la
 // période de même longueur qui précède. On raisonne sur les jours PRÉSENTS :
 // un jour sans trafic n'est pas écrit par audience.py, on ne l'invente pas.
-function resumer(audience, pages, jours) {
+function resumer(audience, pages, jours, heures = '') {
   const n = Math.max(1, Math.min(365, Number(jours) || 30));
   const tous = parserCsv(audience);
   const rangsPages = parserCsv(pages);
-  if (tous.length === 0) return { jours: n, vide: true, serie: [], pages: [], origines: {}, robots: {} };
+  if (tous.length === 0) return { jours: n, vide: true, serie: [], pages: [], origines: {}, robots: {}, heures: null, appareils: null };
 
   const dernier = tous[tous.length - 1].jour;
   const debut = decaler(dernier, -(n - 1));
@@ -105,6 +114,45 @@ function resumer(audience, pages, jours) {
       linkedin: somme(r, ORIGINES.linkedin),
     })),
     pages: listePages,
+    heures: resumerHeures(parserCsv(heures), debut, dernier),
+    appareils: resumerAppareils(periode),
+  };
+}
+
+// Jour de la semaine d'une étiquette AAAA-MM-JJ, lundi = 0.
+const jourSemaine = (jour) => (new Date(`${jour}T00:00:00Z`).getUTCDay() + 6) % 7;
+
+// Vues par jour de la semaine et par heure, sur la période. `null` quand
+// aucune ligne horaire ne tombe dans la période (fichier absent ou trop récent) :
+// la page le dit plutôt que d'afficher une grille vide qui ressemblerait à zéro visite.
+function resumerHeures(rangs, debut, fin) {
+  const dans = rangs
+    .filter((r) => r.jour >= debut && r.jour <= fin && /^\d{1,2}$/.test(r.heure) && Number(r.heure) < 24)
+    .map((r) => ({ ...r, heure: Number(r.heure) }));
+  if (dans.length === 0) return null;
+  const grille = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (const r of dans) grille[jourSemaine(r.jour)][r.heure] += r.vues;
+  const parHeure = Array.from({ length: 24 }, (_, h) => grille.reduce((n, l) => n + l[h], 0));
+  const parJour = grille.map((l) => l.reduce((n, v) => n + v, 0));
+  const indexMax = (t) => t.reduce((m, v, i) => (v > t[m] ? i : m), 0);
+  return {
+    joursMesures: new Set(dans.map((r) => r.jour)).size,
+    grille,
+    parHeure,
+    parJour,
+    pic: { heure: indexMax(parHeure), jourSemaine: indexMax(parJour) },
+  };
+}
+
+// Vues par type d'appareil. Les jours d'avant la mesure ont des cases vides,
+// lues comme 0 : on ne compte que les jours où au moins un appareil est noté.
+function resumerAppareils(periode) {
+  const cles = APPAREILS.map((a) => `app_${a}`);
+  const mesures = periode.filter((r) => somme(r, cles) > 0);
+  if (mesures.length === 0) return null;
+  return {
+    joursMesures: mesures.length,
+    ...Object.fromEntries(APPAREILS.map((a) => [a, total(mesures, (r) => r[`app_${a}`] || 0)])),
   };
 }
 
@@ -121,6 +169,7 @@ async function lireFichiers() {
   if (cache && Date.now() - cache.quand < CACHE_MS) return cache.contenu;
   let audience;
   let pages;
+  let heures = '';
   try {
     [audience, pages] = await Promise.all([
       fs.readFile(path.join(DOSSIER, 'audience.csv'), 'utf8'),
@@ -131,13 +180,22 @@ async function lireFichiers() {
     e.statusCode = 503;
     throw e;
   }
-  cache = { quand: Date.now(), contenu: { audience, pages } };
+  try {
+    heures = await fs.readFile(path.join(DOSSIER, 'heures.csv'), 'utf8');
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      const e = new Error(`Audience indisponible : heures.csv illisible (${err.code || err.message}).`);
+      e.statusCode = 503;
+      throw e;
+    }
+  }
+  cache = { quand: Date.now(), contenu: { audience, pages, heures } };
   return cache.contenu;
 }
 
 async function resume(jours) {
-  const { audience, pages } = await lireFichiers();
-  return resumer(audience, pages, jours);
+  const { audience, pages, heures } = await lireFichiers();
+  return resumer(audience, pages, jours, heures);
 }
 
-module.exports = { parserCsv, resumer, resume, decaler, DOSSIER, ORIGINES, ROBOTS };
+module.exports = { parserCsv, resumer, resume, decaler, jourSemaine, DOSSIER, ORIGINES, ROBOTS };

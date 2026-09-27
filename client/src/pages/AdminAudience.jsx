@@ -1,4 +1,5 @@
-// Audience de gnaro.fr, en détail : série par jour, pages, origines, robots.
+// Audience de gnaro.fr, en détail : série par jour, heures de passage,
+// appareils, pages, origines, robots.
 //
 // Tout vient d'agrégats calculés chaque nuit sur le VPS (audience.py du dépôt
 // gnaro). Aucune adresse, aucun identifiant : des comptes. La période se
@@ -10,6 +11,8 @@ import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import CitationsGrille from '../components/CitationsGrille';
+import GrilleHeures from '../components/audience/GrilleHeures';
+import { jourLong, trancheHoraire } from '../components/audience/libelles';
 
 const PERIODES = [7, 30, 90, 365];
 const ORIGINES = [
@@ -128,6 +131,35 @@ export default function AdminAudience() {
                 <Repartition items={ORIGINES.map(([k, label]) => [label, data.origines[k] || 0])} />
                 <h4 className="mt-6 mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-muted">Passages de robots d'indexation</h4>
                 <Repartition items={[['Robots des assistants IA', data.robots.ia || 0], ['Googlebot, Bingbot', data.robots.moteurs || 0]]} />
+              </Carte>
+            </section>
+
+            <section className="grid gap-6 lg:grid-cols-3">
+              <Carte titre="Heures de passage" className="lg:col-span-2 min-w-0">
+                {data.heures ? (
+                  <>
+                    <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                      Tranche la plus fréquentée : <strong className="text-gray-900 dark:text-dark-text">{trancheHoraire(data.heures.pic.heure)}</strong>
+                      {' · '}jour le plus fréquenté : <strong className="text-gray-900 dark:text-dark-text">{jourLong(data.heures.pic.jourSemaine)}</strong>
+                    </p>
+                    <GrilleHeures heures={data.heures} />
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-dark-muted">Pas encore de mesure horaire sur cette période (compté depuis le 27 septembre 2026).</p>
+                )}
+              </Carte>
+
+              <Carte titre="Appareils">
+                {data.appareils ? (
+                  <>
+                    <Repartition items={[['Ordinateur', data.appareils.ordinateur], ['Mobile', data.appareils.mobile], ['Tablette', data.appareils.tablette]]} />
+                    <p className="mt-3 text-xs text-gray-400 dark:text-dark-muted">
+                      Vues sur {data.appareils.joursMesures} jour{data.appareils.joursMesures > 1 ? 's' : ''} mesuré{data.appareils.joursMesures > 1 ? 's' : ''}, type déduit du navigateur puis oublié.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-dark-muted">Pas encore de mesure des appareils sur cette période.</p>
+                )}
               </Carte>
             </section>
 

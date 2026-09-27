@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import api from '../../api/axios';
 import WidgetError from './WidgetError';
+import { jourLong, trancheHoraire } from '../audience/libelles';
 
 const ORIGINES = [
   ['ia', 'Assistants IA'],
@@ -75,8 +76,13 @@ export default function AudienceWidget() {
           );
         })}
       </ul>
+      {data.heures && (
+        <p className="mt-3 text-xs text-gray-500 dark:text-dark-muted">
+          Pic : <span className="text-gray-900 dark:text-dark-text">{jourLong(data.heures.pic.jourSemaine)}, {trancheHoraire(data.heures.pic.heure)}</span>
+        </p>
+      )}
       <Link to="/admin/audience" className="mt-4 inline-block text-xs font-medium text-accent hover:underline">
-        Détail par jour et par page →
+        Détail par jour, heure et page →
       </Link>
     </Coque>
   );

@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-const { parserCsv, resumer, decaler } = require('../services/audienceGnaro');
+const { parserCsv, resumer, decaler, jourSemaine } = require('../services/audienceGnaro');
 
 const ENTETE = 'jour,pages_vues,contact_vues,ref_chatgpt,ref_perplexity,ref_claude,ref_gemini,ref_copilot,ref_moteurs,ref_linkedin,ref_malt,ref_freework,ref_autres,ref_aucun,robot_gptbot,robot_oai_searchbot,robot_claudebot,robot_perplexitybot,robot_google_extended,robot_googlebot,robot_bingbot';
 const ligne = (jour, vues, contact = 0, o = {}) => [jour, vues, contact,
@@ -64,5 +64,42 @@ describe('resumer', () => {
   it('signale un fichier vide sans planter', () => {
     expect(resumer('', '', 30)).toMatchObject({ vide: true, serie: [], pages: [] });
     expect(resumer(ENTETE, 'jour,page,vues', 30).vide).toBe(true);
+  });
+});
+
+describe('heures et appareils', () => {
+  const E = `${ENTETE},app_mobile,app_ordinateur,app_tablette`;
+  const audience = [E,
+    `${ligne('2026-08-31', 4)},,,`,                     // avant la mesure des appareils : cases vides
+    `${ligne('2026-09-01', 6)},2,4,0`,                  // mardi
+    `${ligne('2026-09-03', 5)},3,1,1`,                  // jeudi
+  ].join('\n');
+  const heures = ['jour,heure,vues', '2026-09-01,9,2', '2026-09-01,14,4', '2026-09-03,14,3', '2026-09-03,23,2',
+    '2026-08-20,14,99', '2026-09-03,24,5', '2026-09-03,x,5'].join('\n');
+
+  it('situe les jours dans la semaine, lundi en premier', () => {
+    expect(jourSemaine('2026-08-31')).toBe(0);
+    expect(jourSemaine('2026-09-01')).toBe(1);
+    expect(jourSemaine('2026-09-06')).toBe(6);
+  });
+  it('ventile les vues par jour de semaine et par heure, hors période et heures invalides écartées', () => {
+    const h = resumer(audience, '', 7, heures).heures;
+    expect(h.joursMesures).toBe(2);
+    expect(h.grille[1][9]).toBe(2);
+    expect(h.grille[1][14]).toBe(4);
+    expect(h.grille[3][14]).toBe(3);
+    expect(h.grille[3][23]).toBe(2);
+    expect(h.parHeure.reduce((n, v) => n + v, 0)).toBe(11);
+    expect(h.pic).toEqual({ heure: 14, jourSemaine: 1 });
+  });
+  it('rend heures nulles sans fichier horaire ou sans ligne dans la période', () => {
+    expect(resumer(audience, '', 7).heures).toBeNull();
+    expect(resumer(audience, '', 7, 'jour,heure,vues\n2026-08-01,10,3').heures).toBeNull();
+  });
+  it('compte les appareils sur les seuls jours mesurés', () => {
+    expect(resumer(audience, '', 7).appareils).toEqual({ joursMesures: 2, mobile: 5, ordinateur: 5, tablette: 1 });
+  });
+  it('rend appareils nuls sur un ancien fichier sans ces colonnes', () => {
+    expect(resumer([ENTETE, ligne('2026-09-01', 3)].join('\n'), '', 7).appareils).toBeNull();
   });
 });
