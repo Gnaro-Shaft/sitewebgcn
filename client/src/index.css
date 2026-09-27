@@ -16,6 +16,12 @@
   --color-dark-text: #e8e8e8;
   --color-dark-muted: #999999;
 
+  /* Audience : humains et robots. Paire validée (daltonisme, contraste 3:1)
+     sur fond blanc et sur dark-bg2 ; le violet s'éclaircit en mode sombre. */
+  --color-humain: #00a85a;
+  --color-robot: #4a3aa7;
+  --color-robot-sombre: #9085e9;
+
   --animate-fade-in-up: fade-in-up 0.6s ease-out both;
   --animate-fade-in: fade-in 0.8s ease-out both;
   --animate-glow-pulse: glow-pulse 4s ease-in-out infinite;

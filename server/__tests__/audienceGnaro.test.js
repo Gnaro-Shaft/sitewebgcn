@@ -53,7 +53,8 @@ describe('resumer', () => {
     expect(r.robots).toEqual({ ia: 2, moteurs: 4 });
     expect(r.pages).toEqual([{ page: '/', vues: 65, part: 81.3 }, { page: '/blog/', vues: 10, part: 12.5 }]);
     expect(r.serie).toHaveLength(2);
-    expect(r.serie[0]).toEqual({ jour: '2026-09-01', vues: 30, contact: 2, ia: 4, moteurs: 6, linkedin: 0 });
+    expect(r.serie[0]).toEqual({ jour: '2026-09-01', vues: 30, contact: 2, ia: 4, moteurs: 6, linkedin: 0, robots: null });
+    expect(r.robotsVues).toBeNull();
   });
   it('rend variation nulle sans période précédente et borne les jours', () => {
     const r = resumer(audience, pages, 9999);
@@ -101,5 +102,37 @@ describe('heures et appareils', () => {
   });
   it('rend appareils nuls sur un ancien fichier sans ces colonnes', () => {
     expect(resumer([ENTETE, ligne('2026-09-01', 3)].join('\n'), '', 7).appareils).toBeNull();
+  });
+});
+
+describe('robots', () => {
+  const E = `${ENTETE},app_mobile,app_ordinateur,app_tablette,robots_declares,robots_probables`;
+  const audience = [E,
+    `${ligne('2026-09-02', 9)},,,,,`,                   // avant la séparation : robots inconnus
+    `${ligne('2026-09-03', 4)},1,3,0,20,7`,
+    `${ligne('2026-09-04', 2)},0,2,0,0,0`,              // zéro robot mesuré, pas inconnu
+  ].join('\n');
+
+  it('distingue « pas mesuré » (null) de « zéro robot »', () => {
+    const r = resumer(audience, '', 7);
+    expect(r.serie.map((j) => j.robots)).toEqual([null, 27, 0]);
+    expect(r.robotsVues).toEqual({ depuis: '2026-09-03', declares: 20, probables: 7 });
+    expect(r.vues).toBe(15);
+  });
+  it('ne calcule pas de variation à travers la rupture de série', () => {
+    const r = resumer(audience, '', 1); // période : le 4 (séparé), avant : le 3 (séparé)
+    expect(r.variation).toBe(-50);
+    expect(resumer(audience, '', 2).variation).toBeNull(); // avant : le 2, non séparé
+  });
+  it('lit le nouveau format horaire et l’ancien, sans inventer de robots', () => {
+    const neuf = resumer(audience, '', 7, 'jour,heure,humains,robots\n2026-09-03,7,1,25\n2026-09-03,9,3,2').heures;
+    expect(neuf.robotsMesures).toBe(true);
+    expect(neuf.parHeure[9]).toBe(3);
+    expect(neuf.parHeureRobots[7]).toBe(25);
+    expect(neuf.pic.heure).toBe(9); // le pic ignore les robots
+    const ancien = resumer(audience, '', 7, 'jour,heure,vues\n2026-09-03,7,5').heures;
+    expect(ancien.robotsMesures).toBe(false);
+    expect(ancien.parHeure[7]).toBe(5);
+    expect(ancien.parHeureRobots[7]).toBe(0);
   });
 });

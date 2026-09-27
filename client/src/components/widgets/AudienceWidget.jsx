@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import api from '../../api/axios';
 import WidgetError from './WidgetError';
-import { jourLong, trancheHoraire } from '../audience/libelles';
+import { COULEUR, jourLong, trancheHoraire } from '../audience/libelles';
 
 const ORIGINES = [
   ['ia', 'Assistants IA'],
@@ -54,10 +54,17 @@ export default function AudienceWidget() {
   return (
     <Coque sousTitre={`${data.du} → ${data.au}`}>
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <Case label="Vues" value={data.vues} accent />
+        <Case label="Vues humaines" value={data.vues} accent />
         <Case label="Contact" value={data.contact} />
         <Case label="7 j. préc." value={data.variation === null ? '—' : `${data.variation > 0 ? '+' : ''}${data.variation} %`} />
       </div>
+      {data.robotsVues && (
+        <p className="-mt-2 mb-4 flex items-center gap-1.5 text-xs text-gray-500 dark:text-dark-muted">
+          <span className={`h-2.5 w-2.5 rounded-sm ${COULEUR.robots}`} />
+          Robots : <span className="tabular-nums text-gray-900 dark:text-dark-text">{data.robotsVues.declares + data.robotsVues.probables}</span>
+          <span className="tabular-nums">({data.robotsVues.declares} déclarés · {data.robotsVues.probables} probables)</span>
+        </p>
+      )}
       <p className="mb-2 text-xs text-gray-500 dark:text-dark-muted">
         Entrées par origine <span className="tabular-nums">({entrees} sur {data.vues} vues)</span>
       </p>

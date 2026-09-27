@@ -8,10 +8,15 @@
 //
 // Trois fichiers :
 //   audience.csv  jour, pages_vues, contact_vues, ref_<origine>…, robot_<nom>…,
-//                 app_mobile, app_ordinateur, app_tablette (depuis le 27/09/2026)
+//                 app_mobile, app_ordinateur, app_tablette,
+//                 robots_declares, robots_probables (depuis le 27/09/2026)
 //   pages.csv     jour, page, vues
-//   heures.csv    jour, heure (0-23, heure de Paris), vues — facultatif : absent
-//                 avant le 27/09/2026, la page s'affiche sans la grille.
+//   heures.csv    jour, heure (0-23, heure de Paris), humains, robots —
+//                 facultatif ; l'ancien format (jour, heure, vues) reste lu.
+//
+// Depuis le 27/09/2026, pages_vues ne compte que les humains ; avant, il
+// incluait les robots qui se font passer pour un navigateur. Une case vide
+// veut dire « pas mesuré ce jour-là », jamais zéro : elle est lue null.
 
 const fs = require('fs/promises');
 const path = require('path');
@@ -51,7 +56,7 @@ function parserCsv(texte) {
     const o = {};
     colonnes.forEach((c, i) => {
       const v = cases[i].trim();
-      o[c] = ETIQUETTES.has(c) ? v : Number(v);
+      o[c] = ETIQUETTES.has(c) ? v : v === '' ? null : Number(v);
       if (typeof o[c] === 'number' && !Number.isFinite(o[c])) o[c] = 0;
     });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(o.jour)) continue;
@@ -63,7 +68,10 @@ function parserCsv(texte) {
 const APPAREILS = ['mobile', 'ordinateur', 'tablette'];
 
 const somme = (o, cles) => cles.reduce((n, c) => n + (o[c] || 0), 0);
-const total = (rangs, f) => rangs.reduce((n, r) => n + f(r), 0);
+const total = (rangs, f) => rangs.reduce((n, r) => n + (f(r) || 0), 0);
+const separe = (r) => r.robots_declares != null;
+const rupture = (avant, periode) => avant.some((r) => !separe(r)) && periode.some(separe);
+const robotsDu = (r) => (r.robots_declares == null ? null : r.robots_declares + (r.robots_probables || 0));
 
 // Résumé sur les `jours` derniers jours présents dans le fichier, comparé à la
 // période de même longueur qui précède. On raisonne sur les jours PRÉSENTS :
@@ -72,7 +80,9 @@ function resumer(audience, pages, jours, heures = '') {
   const n = Math.max(1, Math.min(365, Number(jours) || 30));
   const tous = parserCsv(audience);
   const rangsPages = parserCsv(pages);
-  if (tous.length === 0) return { jours: n, vide: true, serie: [], pages: [], origines: {}, robots: {}, heures: null, appareils: null };
+  if (tous.length === 0) {
+    return { jours: n, vide: true, serie: [], pages: [], origines: {}, robots: {}, heures: null, appareils: null, robotsVues: null };
+  }
 
   const dernier = tous[tous.length - 1].jour;
   const debut = decaler(dernier, -(n - 1));
@@ -101,7 +111,9 @@ function resumer(audience, pages, jours, heures = '') {
     au: dernier,
     vues,
     contact: total(periode, (r) => r.contact_vues),
-    variation: vuesAvant ? Math.round((1000 * (vues - vuesAvant)) / vuesAvant) / 10 : null,
+    // Pas de variation à travers la rupture de série : avant la séparation,
+    // les vues comptaient les robots déguisés, la baisse serait un artefact.
+    variation: vuesAvant && !rupture(avant, periode) ? Math.round((1000 * (vues - vuesAvant)) / vuesAvant) / 10 : null,
     joursAvecTrafic: periode.length,
     origines,
     robots,
@@ -112,7 +124,9 @@ function resumer(audience, pages, jours, heures = '') {
       ia: somme(r, ORIGINES.ia),
       moteurs: somme(r, ORIGINES.moteurs),
       linkedin: somme(r, ORIGINES.linkedin),
+      robots: robotsDu(r),
     })),
+    robotsVues: resumerRobots(periode),
     pages: listePages,
     heures: resumerHeures(parserCsv(heures), debut, dernier),
     appareils: resumerAppareils(periode),
@@ -125,27 +139,49 @@ const jourSemaine = (jour) => (new Date(`${jour}T00:00:00Z`).getUTCDay() + 6) % 
 // Vues par jour de la semaine et par heure, sur la période. `null` quand
 // aucune ligne horaire ne tombe dans la période (fichier absent ou trop récent) :
 // la page le dit plutôt que d'afficher une grille vide qui ressemblerait à zéro visite.
+// Deux grilles : humains et robots. Le pic ne porte que sur les humains.
 function resumerHeures(rangs, debut, fin) {
   const dans = rangs
     .filter((r) => r.jour >= debut && r.jour <= fin && /^\d{1,2}$/.test(r.heure) && Number(r.heure) < 24)
-    .map((r) => ({ ...r, heure: Number(r.heure) }));
+    .map((r) => ({ jour: r.jour, heure: Number(r.heure), humains: r.humains ?? r.vues ?? 0, robots: r.robots ?? null }));
   if (dans.length === 0) return null;
-  const grille = Array.from({ length: 7 }, () => Array(24).fill(0));
-  for (const r of dans) grille[jourSemaine(r.jour)][r.heure] += r.vues;
-  const parHeure = Array.from({ length: 24 }, (_, h) => grille.reduce((n, l) => n + l[h], 0));
+  const vide = () => Array.from({ length: 7 }, () => Array(24).fill(0));
+  const grille = vide();
+  const grilleRobots = vide();
+  for (const r of dans) {
+    grille[jourSemaine(r.jour)][r.heure] += r.humains;
+    grilleRobots[jourSemaine(r.jour)][r.heure] += r.robots || 0;
+  }
+  const parHeureDe = (g) => Array.from({ length: 24 }, (_, h) => g.reduce((n, l) => n + l[h], 0));
+  const parHeure = parHeureDe(grille);
   const parJour = grille.map((l) => l.reduce((n, v) => n + v, 0));
   const indexMax = (t) => t.reduce((m, v, i) => (v > t[m] ? i : m), 0);
   return {
     joursMesures: new Set(dans.map((r) => r.jour)).size,
+    robotsMesures: dans.some((r) => r.robots !== null),
     grille,
+    grilleRobots,
     parHeure,
+    parHeureRobots: parHeureDe(grilleRobots),
     parJour,
     pic: { heure: indexMax(parHeure), jourSemaine: indexMax(parJour) },
   };
 }
 
-// Vues par type d'appareil. Les jours d'avant la mesure ont des cases vides,
-// lues comme 0 : on ne compte que les jours où au moins un appareil est noté.
+// Vues de robots sur les jours où elles sont mesurées ; `depuis` date la
+// rupture de série, pour que la page le dise.
+function resumerRobots(periode) {
+  const mesures = periode.filter((r) => r.robots_declares != null);
+  if (mesures.length === 0) return null;
+  return {
+    depuis: mesures[0].jour,
+    declares: total(mesures, (r) => r.robots_declares),
+    probables: total(mesures, (r) => r.robots_probables),
+  };
+}
+
+// Vues par type d'appareil. Les jours d'avant la mesure ont des cases vides
+// (null) : on ne compte que les jours où au moins un appareil est noté.
 function resumerAppareils(periode) {
   const cles = APPAREILS.map((a) => `app_${a}`);
   const mesures = periode.filter((r) => somme(r, cles) > 0);

@@ -12,6 +12,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import CitationsGrille from '../components/CitationsGrille';
 import GrilleHeures from '../components/audience/GrilleHeures';
+import HistogrammeHeures from '../components/audience/HistogrammeHeures';
+import SerieJours from '../components/audience/SerieJours';
 import { jourLong, trancheHoraire } from '../components/audience/libelles';
 
 const PERIODES = [7, 30, 90, 365];
@@ -40,7 +42,6 @@ export default function AdminAudience() {
     return () => { vivant = false; };
   }, [jours]);
 
-  const maxVues = data ? Math.max(1, ...data.serie.map((j) => j.vues)) : 1;
   // Les vues en navigation interne ne sont ventilées dans aucune origine :
   // la somme des origines est inférieure au total des vues, et les parts
   // affichées ci-dessous portent sur elle, pas sur les vues.
@@ -73,7 +74,7 @@ export default function AdminAudience() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-dark-text">Audience de gnaro.fr</h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-dark-muted">
-              Comptes agrégés chaque nuit sur le serveur, robots exclus des vues. Aucune donnée personnelle.
+              Comptes agrégés chaque nuit sur le serveur. Les vues sont humaines ; les robots sont comptés à part. Aucune donnée personnelle.
             </p>
           </div>
           <div className="flex gap-1 rounded-lg border border-gray-200 dark:border-dark-border p-1">
@@ -101,30 +102,23 @@ export default function AdminAudience() {
 
         {data && !data.vide && (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Chiffre label={`Vues, ${data.du} → ${data.au}`} value={data.vues} accent />
+            <Rupture robotsVues={data.robotsVues} du={data.du} />
+
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <Chiffre label={`Vues humaines, ${data.du} → ${data.au}`} value={data.vues} accent />
+              <Chiffre
+                label={data.robotsVues ? `Vues de robots (déclarés · probables)` : 'Vues de robots'}
+                value={data.robotsVues ? `${data.robotsVues.declares + data.robotsVues.probables}` : '—'}
+                detail={data.robotsVues && `${data.robotsVues.declares} · ${data.robotsVues.probables}`}
+              />
               <Chiffre label="Vues de la page contact" value={data.contact} />
               <Chiffre label="Par rapport à la période précédente" value={data.variation === null ? '—' : `${data.variation > 0 ? '+' : ''}${data.variation} %`} />
               <Chiffre label="Jours avec trafic" value={`${data.joursAvecTrafic} / ${data.jours}`} />
             </section>
 
             <section className="grid gap-6 lg:grid-cols-3">
-              <Carte titre="Vues par jour" className="lg:col-span-2">
-                <ul className="space-y-1">
-                  {data.serie.map((j) => (
-                    <li key={j.jour} className="flex items-center gap-3 text-xs">
-                      <span className="w-24 shrink-0 tabular-nums text-gray-500 dark:text-dark-muted">{j.jour}</span>
-                      <div className="flex-1 h-3 rounded bg-gray-100 dark:bg-dark-bg3 overflow-hidden">
-                        <div className="h-3 bg-accent" style={{ width: `${Math.round((100 * j.vues) / maxVues)}%` }} />
-                      </div>
-                      <span className="w-10 text-right tabular-nums text-gray-900 dark:text-dark-text">{j.vues}</span>
-                      <span className="w-28 text-right tabular-nums text-gray-400 dark:text-dark-muted" title="IA · moteurs · LinkedIn">
-                        {j.ia} · {j.moteurs} · {j.linkedin}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-xs text-gray-400 dark:text-dark-muted">Colonne de droite : visites venues d'assistants IA · de moteurs · de LinkedIn.</p>
+              <Carte titre="Vues par jour" className="lg:col-span-2 min-w-0">
+                <SerieJours serie={data.serie} />
               </Carte>
 
               <Carte titre={`Origine des visites (${entrees} sur ${data.vues} vues)`}>
@@ -142,6 +136,8 @@ export default function AdminAudience() {
                       Tranche la plus fréquentée : <strong className="text-gray-900 dark:text-dark-text">{trancheHoraire(data.heures.pic.heure)}</strong>
                       {' · '}jour le plus fréquenté : <strong className="text-gray-900 dark:text-dark-text">{jourLong(data.heures.pic.jourSemaine)}</strong>
                     </p>
+                    <HistogrammeHeures heures={data.heures} />
+                    <h4 className="mt-6 mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-muted">Par jour de la semaine</h4>
                     <GrilleHeures heures={data.heures} />
                   </>
                 ) : (
@@ -188,12 +184,25 @@ export default function AdminAudience() {
   );
 }
 
-function Chiffre({ label, value, accent }) {
+function Chiffre({ label, value, accent, detail }) {
   return (
     <div className="bg-white dark:bg-dark-bg2 rounded-xl border border-gray-200 dark:border-dark-border p-5">
       <p className="text-xs text-gray-500 dark:text-dark-muted">{label}</p>
       <p className={`mt-1 text-2xl font-semibold tabular-nums ${accent ? 'text-accent' : 'text-gray-900 dark:text-dark-text'}`}>{value}</p>
+      {detail && <p className="mt-0.5 text-xs tabular-nums text-gray-500 dark:text-dark-muted">{detail}</p>}
     </div>
+  );
+}
+
+// Avant la séparation, les vues incluaient les robots qui se font passer pour
+// un navigateur : une comparaison à travers cette date surévalue l'avant.
+function Rupture({ robotsVues, du }) {
+  if (robotsVues && robotsVues.depuis <= du) return null;
+  const texte = robotsVues
+    ? `Robots séparés depuis le ${robotsVues.depuis}. Avant cette date, les vues incluent les robots qui se font passer pour un navigateur.`
+    : 'Sur cette période, les robots qui se font passer pour un navigateur ne sont pas séparés : ils sont comptés dans les vues.';
+  return (
+    <p className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg2 px-4 py-3 text-sm text-gray-600 dark:text-dark-muted">{texte}</p>
   );
 }
 
