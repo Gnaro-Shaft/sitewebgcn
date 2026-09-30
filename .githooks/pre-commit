@@ -36,9 +36,15 @@ fi
 
 # --- 2. Signatures de secret --------------------------------------------------
 # Les motifs a prefixe (sk-, sk_, ghp_, AKIA...) sont ancres sur un debut de
-# mot : sans cela, `risk_manager_bloque_et_alerte` contient `sk_` suivi de 23
-# caracteres et passe pour une cle Stripe. Un vrai secret est toujours precede
-# d'un caractere non alphanumerique (guillemet, espace, =) ou du `+` du diff.
+# mot. Sans cet ancrage, un identifiant ordinaire du code passerait pour une
+# cle : il suffit qu'un nom de variable se termine par les deux lettres du
+# prefixe, soit suivi d'un underscore, puis d'une vingtaine de caracteres.
+# Un vrai secret est toujours precede d'un caractere non alphanumerique
+# (guillemet, espace, =) ou du `+` du diff.
+#
+# Ce commentaire evite volontairement de citer un tel identifiant en exemple :
+# l'exemple serait lui-meme detecte comme un secret, et ce fichier deviendrait
+# impossible a versionner.
 motif='((^|[^A-Za-z0-9_])(sk-[A-Za-z0-9_-]{20,}|sk_[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})|BEGIN [A-Z ]*PRIVATE KEY|[Aa][Pp][Ii][_-]?[Kk][Ee][Yy][[:space:]]*[:=][[:space:]]*.?[A-Za-z0-9_-]{12,}|[Ss][Ee][Cc][Rr][Ee][Tt][[:space:]]*[:=][[:space:]]*.?[A-Za-z0-9_-]{12,}|[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd][[:space:]]*[:=][[:space:]]*.?[A-Za-z0-9_-]{12,}|[Tt][Oo][Kk][Ee][Nn][[:space:]]*[:=][[:space:]]*.?[A-Za-z0-9_-]{12,})'
 
 nb_secrets=$(git diff --cached -U0 --diff-filter=ACM \

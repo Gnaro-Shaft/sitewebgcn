@@ -1,7 +1,7 @@
 {
   "name": "siteweb",
   "version": "1.0.0",
-  "description": "Portfolio + Dashboard API",
+  "description": "Tableau de bord privé gcn-data.fr (API + client)",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
