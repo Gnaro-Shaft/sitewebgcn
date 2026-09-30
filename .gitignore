@@ -10,3 +10,4 @@ cv-content.md
 
 # Journaux de sécurité — contiennent des adresses IP (données personnelles)
 logs/
+.claude/settings.local.json
